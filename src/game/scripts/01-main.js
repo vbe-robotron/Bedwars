@@ -1,1180 +1,92 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>BedWars Ultimate</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
-*{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#000;font-family:'VT323',monospace;user-select:none;color:white}
-@keyframes emoteFloat{0%{opacity:0;transform:translateX(-50%) translateY(0) scale(0.5)}20%{opacity:1;transform:translateX(-50%) translateY(-10px) scale(1.2)}80%{opacity:1;transform:translateX(-50%) translateY(-30px) scale(1)}100%{opacity:0;transform:translateX(-50%) translateY(-50px) scale(0.8)}}
-body.kishiku-mode #hud,body.kishiku-mode #hotbar-wrap,body.kishiku-mode .mc-btn,body.kishiku-mode #chat-overlay{filter:invert(1) hue-rotate(180deg)}
 
-/* === DAMAGE FLASH === */
-#damage-flash{position:fixed;inset:0;background:rgba(200,0,0,0);pointer-events:none;z-index:500;transition:background 0.08s}
-#damage-flash.active{background:rgba(200,0,0,0.38)}
-#damage-hit-vignette{position:fixed;inset:0;border:0 solid rgba(255,40,40,0);pointer-events:none;z-index:499;transition:box-shadow .08s,opacity .08s;opacity:0}
-#damage-hit-vignette.active{opacity:1;box-shadow:inset 0 0 90px 18px rgba(255,45,45,.24)}
-#bow-charge-v2{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);width:300px;padding:7px 10px;background:rgba(0,0,0,.72);border:2px solid rgba(255,255,255,.35);border-radius:4px;z-index:140;text-align:center;display:none;pointer-events:none}
-#bow-charge-v2 .bow-title{font-size:14px;color:#fff}
-#bow-charge-v2 .bow-track{height:12px;margin-top:5px;background:#222;border:1px solid #555;overflow:hidden}
-#bow-charge-v2 .bow-fill{height:100%;width:0%;background:#44ff44;transition:none}
-#bow-charge-v2 .bow-info{display:flex;justify-content:space-between;font-size:12px;color:#ddd;margin-top:3px}
-
-
-/* === LOBBY === */
-#lobby{position:absolute;inset:0;background-image:var(--lobby-bg,url('https://assets.topics.apps-jp.nintendo.com/image/2023/06/05045330153146/0/73535_820_461.jpg'));background-size:cover;background-position:center;background-repeat:no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:background-image 0.4s ease}
-.lobby-panel{background:rgba(10,10,20,.95);padding:28px 36px;border:3px solid;border-color:#444 #111 #111 #444;max-width:760px;width:96%;box-shadow:8px 8px 0 rgba(0,0,0,.8);border-radius:2px}
-.lobby-title{font-size:72px;color:#FFAA00;text-shadow:4px 4px 0 #7a4a00,7px 7px 0 rgba(0,0,0,.5);margin-bottom:2px;letter-spacing:2px;text-align:center}
-.lobby-sub{font-size:20px;color:#aaa;margin-bottom:16px;letter-spacing:4px;text-align:center}
-
-/* Minecraft-style buttons */
-.mc-btn{font-family:'VT323',monospace;font-size:26px;padding:8px 28px;background:linear-gradient(to bottom,#7aaf7a 0%,#4d8a4d 45%,#3a6b3a 100%);color:white;border:3px solid;border-color:#aaddaa #1f4d1f #1f4d1f #aaddaa;cursor:pointer;text-shadow:2px 2px 0 #000;margin:4px;display:inline-block;letter-spacing:1px;position:relative;outline:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.35)}
-.mc-btn:hover{background:linear-gradient(to bottom,#90cc90 0%,#60a060 45%,#4a804a 100%)}
-.mc-btn:active{border-color:#1f4d1f #aaddaa #aaddaa #1f4d1f;top:2px;box-shadow:none}
-.mc-btn:disabled,.mc-btn[disabled]{background:linear-gradient(to bottom,#555,#3a3a3a);border-color:#666 #2a2a2a #2a2a2a #666;color:#888;cursor:default}
-.mc-btn.btn-red{background:linear-gradient(to bottom,#cc5555,#993333);border-color:#ff9999 #440000 #440000 #ff9999}
-.mc-btn.btn-red:hover{background:linear-gradient(to bottom,#dd6666,#aa4444)}
-.mc-btn.btn-blue{background:linear-gradient(to bottom,#5577dd,#3355bb);border-color:#88aaff #111e44 #111e44 #88aaff}
-.mc-btn.btn-blue:hover{background:linear-gradient(to bottom,#6688ee,#4466cc)}
-.mc-btn.btn-gold{background:linear-gradient(to bottom,#cc9900,#996600);border-color:#ffcc33 #442200 #442200 #ffcc33}
-.mc-btn.btn-gold:hover{background:linear-gradient(to bottom,#ddaa11,#aa7711)}
-.mc-input{font-family:'VT323',monospace;font-size:26px;padding:8px 14px;background:#1a1a1a;color:white;border:3px solid #555;border-right-color:#aaa;border-bottom-color:#aaa;outline:none;width:100%;text-align:center;transition:border-color .2s}
-.mc-input:focus{border-color:#FFAA00 #aaa #aaa #FFAA00}
-
-/* Lobby layout */
-.lobby-layout{display:flex;gap:16px;align-items:flex-start;margin-bottom:14px}
-
-/* ---- Skin viewer in lobby ---- */
-.skin-viewer-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
-.skin-box{width:82px;height:164px;background:#111;border:3px solid #333;border-right-color:#777;border-bottom-color:#777;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;perspective:900px;cursor:ew-resize}
-.stage-3d{width:128px;height:256px;transform-style:preserve-3d;transform:scale(0.46)translateX(-26px)translateY(8px)}
-.char-model-3d{width:100%;height:100%;position:absolute;transform-style:preserve-3d;transform:rotateY(0deg)rotateX(-5deg);image-rendering:pixelated}
-.box-3d{position:absolute;transform-style:preserve-3d}
-.head-3d {width:64px;height:64px;top:0;left:32px;z-index:10;transform-origin:32px 64px 0}
-.body-3d {width:64px;height:96px;top:64px;left:32px;z-index:5}
-.r-arm-3d{width:32px;height:96px;top:64px;left:0;z-index:4;transform-origin:16px 16px 16px}
-.l-arm-3d{width:32px;height:96px;top:64px;left:96px;z-index:4;transform-origin:16px 16px 16px}
-.r-leg-3d{width:32px;height:96px;top:160px;left:32px;z-index:3;transform-origin:16px 0}
-.l-leg-3d{width:32px;height:96px;top:160px;left:64px;z-index:3;transform-origin:16px 0}
-.face{position:absolute;background-size:512px 512px;background-repeat:no-repeat;transform-style:preserve-3d;image-rendering:pixelated}
-.hd-f{width:64px;height:64px;background-position:-64px -64px;transform:rotateY(0deg)translateZ(32px)}
-.hd-b{width:64px;height:64px;background-position:-192px -64px;transform:rotateY(180deg)translateZ(32px)}
-.hd-l{width:64px;height:64px;background-position:0 -64px;transform:rotateY(-90deg)translateZ(32px)}
-.hd-r{width:64px;height:64px;background-position:-128px -64px;transform:rotateY(90deg)translateZ(32px)}
-.hd-u{width:64px;height:64px;background-position:-64px 0;transform:rotateX(90deg)translateZ(32px)}
-.hd-d{width:64px;height:64px;background-position:-128px 0;transform:rotateX(-90deg)translateZ(32px)}
-.bd-f{width:64px;height:96px;background-position:-160px -160px;transform:rotateY(0deg)translateZ(16px)}
-.bd-b{width:64px;height:96px;background-position:-256px -160px;transform:rotateY(180deg)translateZ(16px)}
-.bd-l{width:32px;height:96px;background-position:-128px -160px;transform:rotateY(-90deg)translateZ(16px)translateX(-16px)}
-.bd-r{width:32px;height:96px;background-position:-224px -160px;transform:rotateY(90deg)translateZ(48px)translateX(16px)}
-.bd-u{width:64px;height:32px;background-position:-160px -128px;transform:rotateX(90deg)translateZ(16px)}
-.bd-d{width:64px;height:32px;background-position:-224px -128px;transform:rotateX(-90deg)translateZ(80px)}
-.ra-f{width:32px;height:96px;background-position:-352px -160px;transform:rotateY(0deg)translateZ(16px)}
-.ra-b{width:32px;height:96px;background-position:-416px -160px;transform:rotateY(180deg)translateZ(16px)}
-.ra-l{width:32px;height:96px;background-position:-320px -160px;transform:rotateY(-90deg)translateZ(16px)}
-.ra-r{width:32px;height:96px;background-position:-384px -160px;transform:rotateY(90deg)translateZ(16px)}
-.ra-u{width:32px;height:32px;background-position:-352px -128px;transform:rotateX(90deg)translateZ(16px)}
-.ra-d{width:32px;height:32px;background-position:-384px -128px;transform:rotateX(-90deg)translateZ(80px)}
-.la-f{width:32px;height:96px;background-position:-288px -416px;transform:rotateY(0deg)translateZ(16px)}
-.la-b{width:32px;height:96px;background-position:-352px -416px;transform:rotateY(180deg)translateZ(16px)}
-.la-l{width:32px;height:96px;background-position:-256px -416px;transform:rotateY(-90deg)translateZ(16px)}
-.la-r{width:32px;height:96px;background-position:-320px -416px;transform:rotateY(90deg)translateZ(16px)}
-.la-u{width:32px;height:32px;background-position:-288px -384px;transform:rotateX(90deg)translateZ(16px)}
-.la-d{width:32px;height:32px;background-position:-320px -384px;transform:rotateX(-90deg)translateZ(80px)}
-.rl-f{width:32px;height:96px;background-position:-32px -160px;transform:rotateY(0deg)translateZ(16px)}
-.rl-b{width:32px;height:96px;background-position:-96px -160px;transform:rotateY(180deg)translateZ(16px)}
-.rl-l{width:32px;height:96px;background-position:0 -160px;transform:rotateY(-90deg)translateZ(16px)}
-.rl-r{width:32px;height:96px;background-position:-64px -160px;transform:rotateY(90deg)translateZ(16px)}
-.rl-u{width:32px;height:32px;background-position:-32px -128px;transform:rotateX(90deg)translateZ(16px)}
-.rl-d{width:32px;height:32px;background-position:-64px -128px;transform:rotateX(-90deg)translateZ(80px)}
-.ll-f{width:32px;height:96px;background-position:-160px -416px;transform:rotateY(0deg)translateZ(16px)}
-.ll-b{width:32px;height:96px;background-position:-224px -416px;transform:rotateY(180deg)translateZ(16px)}
-.ll-l{width:32px;height:96px;background-position:-128px -416px;transform:rotateY(-90deg)translateZ(16px)}
-.ll-r{width:32px;height:96px;background-position:-192px -416px;transform:rotateY(90deg)translateZ(16px)}
-.ll-u{width:32px;height:32px;background-position:-160px -384px;transform:rotateX(90deg)translateZ(16px)}
-.ll-d{width:32px;height:32px;background-position:-192px -384px;transform:rotateX(-90deg)translateZ(80px)}
-
-@keyframes sw-f{0%,100%{transform:rotateX(0)}50%{transform:rotateX(-45deg)}}
-@keyframes sw-b{0%,100%{transform:rotateX(0)}50%{transform:rotateX(45deg)}}
-.skin-walk .r-arm-3d{animation:sw-f .7s infinite ease-in-out}
-.skin-walk .l-arm-3d{animation:sw-b .7s infinite ease-in-out}
-.skin-walk .r-leg-3d{animation:sw-b .7s infinite ease-in-out}
-.skin-walk .l-leg-3d{animation:sw-f .7s infinite ease-in-out}
-
-.skin-upload-btn{font-family:'VT323',monospace;font-size:15px;padding:4px 8px;background:#444;color:#ddd;border:2px solid #555;border-right-color:#888;border-bottom-color:#888;cursor:pointer;text-align:center;width:82px}
-.skin-upload-btn:hover{background:#555}
-
-/* Lobby info section */
-.lobby-info{flex:1;display:flex;flex-direction:column;gap:8px}
-.player-list{background:rgba(0,0,0,.55);border:2px solid #444;border-right-color:#888;border-bottom-color:#888;padding:8px 10px;min-height:90px;font-size:19px;line-height:1.7}
-.player-entry{padding:1px 4px}
-.lobby-status{font-size:18px;color:#aaa;text-align:center}
-.team-mode-row{display:flex;gap:6px;justify-content:center;align-items:center}
-.team-mode-row label{font-size:20px;color:#ddd}
-.lobby-stats{font-size:18px;color:#bbb;text-align:center;margin-top:4px}
-.stat-v{color:#55FFFF}
-#host-controls{display:none;text-align:center}
-#guest-controls{display:none;font-size:20px;color:#ffaa00;text-align:center;padding:6px}
-
-/* HUD */
-#crosshair{position:absolute;top:50%;left:50%;width:14px;height:14px;transform:translate(-50%,-50%);pointer-events:none;z-index:100;display:none}
-#crosshair::before,#crosshair::after{content:'';position:absolute;background:rgba(255,255,255,.85)}
-#crosshair::before{width:2px;height:14px;left:6px;top:0}
-#crosshair::after{width:14px;height:2px;top:6px;left:0}
-#hud{position:absolute;bottom:88px;left:50%;transform:translateX(-50%);font-size:25px;text-align:center;pointer-events:none;display:none;text-shadow:2px 2px 0 #000}
-.hud-bar{display:inline-block;margin:0 10px}
-#status-msg{font-size:18px;color:#aaa;display:block;margin-top:1px}
-#view-badge{font-size:16px;color:#ffff55;display:block}
-
-/* HOTBAR */
-#hotbar-wrap{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;flex-direction:row;background:rgba(0,0,0,.78);padding:4px;border:2px solid #444;border-right-color:#888;border-bottom-color:#888;gap:2px;z-index:99}
-.hb-slot{width:56px;height:56px;border:2px solid #666;position:relative;background:linear-gradient(135deg,#555,#444);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:1px;overflow:hidden;cursor:pointer}
-.hb-slot.active{border-color:#fff;box-shadow:0 0 0 1px #fff,inset 0 0 8px rgba(255,255,255,.18)}
-.hb-emoji{font-size:24px;line-height:1;pointer-events:none}
-.hb-lbl{font-size:9px;color:#eee;text-shadow:1px 1px 0 #000;text-align:center;margin-top:1px;white-space:nowrap;overflow:hidden;max-width:54px;pointer-events:none}
-.hb-count{position:absolute;bottom:1px;right:3px;font-size:15px;color:white;text-shadow:1px 1px 0 #000;pointer-events:none}
-
-/* v13: アイテムアイコンデザイン */
-.item-icon{
-  width:32px;height:32px;border-radius:6px;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:inset 0 2px 3px rgba(255,255,255,0.35), inset 0 -3px 4px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.4);
-  border:1px solid rgba(0,0,0,0.4);
-  position:relative;
-  transition:transform 0.12s ease;
-}
-.item-icon-glyph{font-size:17px;filter:drop-shadow(1px 1px 1px rgba(0,0,0,0.5));line-height:1}
-.inv-slot:hover .item-icon, .hb-slot:hover .item-icon{transform:scale(1.08)}
-
-/* v13: ボタンデザイン刷新 */
-.mc-btn{
-  position:relative;
-  font-family:'VT323',monospace,sans-serif;
-  letter-spacing:0.5px;
-  border-radius:4px;
-  border:2px solid;
-  border-color:rgba(255,255,255,0.25) rgba(0,0,0,0.35) rgba(0,0,0,0.45) rgba(255,255,255,0.25);
-  box-shadow:0 3px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
-  cursor:pointer;
-  transition:transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
-  text-shadow:1px 1px 2px rgba(0,0,0,0.6);
-}
-.mc-btn:hover{filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 4px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2)}
-.mc-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)}
-
-/* 設定パネルのスタイル - タブ式クリーンデザイン */
-.set-section{color:#3a2a10;font-size:13px;font-weight:bold;border-bottom:2px solid #8a8a8a;padding-bottom:4px;margin:10px 0 6px;letter-spacing:1px}
-#settings-panel .set-section{color:#3a2a10}
-.set-label{display:flex;justify-content:space-between;align-items:center;color:#222;font-size:13px;padding:6px 2px;border-bottom:1px solid #9a9a9a;gap:12px}
-.set-label:hover{background:rgba(255,255,255,0.25)}
-.set-label span.key{flex:1;color:#333}
-.set-label input[type=range]{flex:0 0 120px;accent-color:#3d6e3d}
-.set-label select{background:#d6d6d6;color:#111;border:2px solid #555;padding:3px 6px;font-size:12px}
-.set-label input[type=checkbox]{width:17px;height:17px;accent-color:#3d6e3d;cursor:pointer}
-#keybind-list div{color:#222!important;border-bottom:1px solid #9a9a9a!important}
-#bw-profile-chip.ingame{display:none!important}
-.set-val{color:#fff;font-size:11px;min-width:32px;text-align:right}
-
-#chat-overlay{position:fixed;bottom:100px;left:20px;width:300px;max-height:180px;background:rgba(0,0,0,0.6);border-radius:4px;overflow-y:auto;display:none;z-index:90;padding:6px}
-.chat-msg{padding:4px 6px;margin:2px 0;font-size:12px;word-wrap:break-word;color:#fff;text-shadow:1px 1px 2px #000;border-left:2px solid rgba(255,255,255,0.3)}
-#chat-input-box{position:fixed;bottom:10px;left:20px;width:320px;display:none;z-index:100;background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:3px}
-#chat-input{width:100%;padding:7px;background:#222;color:#fff;border:none;font-size:12px;outline:none}
-
-/* v7: 頭上名前ラベル */
-.mp-nameplate{position:absolute;pointer-events:none;transform:translate(-50%,-100%);white-space:nowrap;background:rgba(0,0,0,0.6);padding:2px 5px;border-radius:2px;font-size:11px;color:#fff;text-shadow:1px 1px 0 #000}
-
-/* v7: スキンモデル（CSS 3D） */
-.box-3d{position:absolute;transform-style:preserve-3d}
-.face-3d{position:absolute;image-rendering:pixelated;background-size:512px 512px;background-repeat:no-repeat}
-
-/* ANNOUNCEMENT */
-#announcement{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:56px;text-shadow:4px 4px 0 #000;display:none;text-align:center;z-index:300;pointer-events:none;white-space:nowrap}
-
-/* BREAK BAR */
-#break-progress{position:absolute;top:61%;left:50%;transform:translateX(-50%);width:190px;height:14px;border:2px solid rgba(255,255,255,.8);display:none;background:rgba(0,0,0,.6);z-index:100;border-radius:1px}
-#break-bar{height:100%;background:linear-gradient(90deg,#00cc00,#aaff00);width:0%}
-
-/* SCOREBOARD */
-#scoreboard{position:absolute;top:16px;right:16px;background:rgba(0,0,0,.75);border:2px solid #555;padding:12px 16px;display:none;min-width:190px;border-radius:2px;font-size:18px}
-#scoreboard h3{margin:0 0 8px;color:#FFAA00;text-align:center;font-size:20px;letter-spacing:2px}
-.sb-line{display:flex;justify-content:space-between;margin-bottom:3px}
-
-/* MP OVERLAY */
-#mp-overlay{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);padding:4px 14px;border:2px solid #555;font-size:16px;display:none;z-index:50;border-radius:2px;text-align:center}
-#mp-players{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:3px}
-.mp-player{font-size:14px;padding:1px 7px;border-radius:2px;border:1px solid rgba(255,255,255,.3)}
-
-/* WINDOWS */
-.window{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#b8b8b8;border:4px solid;border-color:#fff #444 #444 #fff;padding:16px;display:none;z-index:200;width:660px;max-height:82vh;overflow-y:auto;box-shadow:6px 6px 0 rgba(0,0,0,.7);color:#222}
-.window h2{margin:0 0 10px;font-size:28px;text-shadow:1px 1px 0 rgba(255,255,255,.6)}
-.tabs{display:flex;margin-bottom:10px;gap:3px}
-.tab{background:#888;border:2px solid;border-color:#bbb #333 #333 #bbb;padding:5px 14px;cursor:pointer;color:white;font-size:19px}
-.tab.active{background:#b8b8b8;color:#222;border-bottom-color:#b8b8b8}
-.tab:hover:not(.active){background:#999}
-.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.btn-buy{background:linear-gradient(180deg,#888,#666);border:2px solid;border-color:#aaa #333 #333 #aaa;padding:9px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;color:white;font-size:18px;border-radius:1px;font-family:'VT323',monospace}
-.shop-card{transition:transform 0.1s ease, filter 0.15s ease;border-radius:4px;margin-bottom:4px}
-.shop-card:hover{filter:brightness(1.2);transform:translateX(3px)}
-.shop-card:active{transform:translateX(1px) scale(0.98)}
-.btn-buy:hover{background:linear-gradient(180deg,#999,#777)}
-
-/* INVENTORY WINDOW */
-#win-inventory{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#c6c6c6;border:4px solid;border-color:#fff #555 #555 #fff;padding:14px;display:none;z-index:200;width:470px;box-shadow:6px 6px 0 rgba(0,0,0,.7);color:#222}
-.inv-title{font-size:22px;margin:0 0 10px;color:#333;text-shadow:1px 1px 0 #fff}
-.inv-top{display:flex;gap:8px;margin-bottom:10px;align-items:flex-start}
-.inv-armor-col{display:none!important}
-#win-inventory{background:#c6c6c6;border:3px solid #fff;border-right-color:#555;border-bottom-color:#555;image-rendering:pixelated}
-.inv-title{font-size:16px;letter-spacing:1px;text-align:center;color:#3f3f3f}
-.inv-skin-box{width:68px;height:144px;background:#111;border:3px solid #333;border-right-color:#777;border-bottom-color:#777;perspective:800px;overflow:hidden;position:relative;cursor:ew-resize}
-.inv-skin-stage{width:128px;height:256px;transform-style:preserve-3d;transform:scale(0.41)translateX(-29px)translateY(8px)}
-.inv-skin-model{width:100%;height:100%;position:absolute;transform-style:preserve-3d;transform:rotateY(0deg)rotateX(-5deg);image-rendering:pixelated}
-.inv-info{flex:1;font-size:17px;line-height:1.8;color:#444;padding-top:2px}
-.inv-info span{color:#222;font-weight:bold}
-.inv-slot{width:40px;height:40px;background:#8b8b8b;border:3px solid #373737;border-right-color:#fff;border-bottom-color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;cursor:pointer;position:relative;user-select:none}
-.inv-slot:hover{background:#b0b0b0}
-.inv-slot.inv-active{background:#a8a8ff;border-color:#5555ff}
-.inv-grid{display:grid;grid-template-columns:repeat(9,40px);gap:3px}
-.inv-count{position:absolute;bottom:1px;right:2px;font-size:11px;font-weight:bold;color:#fff;text-shadow:1px 1px 0 #000,-1px 0 0 #000,0 -1px 0 #000;pointer-events:none;font-family:monospace}
-
-/* 3rd person badge */
-#view-badge-overlay{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);border:1px solid #555;padding:2px 12px;font-size:16px;color:#ffff55;display:none;z-index:60;border-radius:2px}
-#bw-match-timer{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:128;background:rgba(0,0,0,.62);border:2px solid rgba(255,255,255,.25);padding:3px 14px;border-radius:5px;color:#fff;font:20px monospace;display:none;pointer-events:none;text-shadow:2px 2px #000}
-#bw-fluid-badge{position:fixed;bottom:142px;left:50%;transform:translateX(-50%);z-index:126;color:#9ff;font:12px monospace;display:none;background:rgba(0,0,0,.55);padding:2px 7px;border-radius:3px}
-#bw-debug-precision{position:fixed;top:90px;left:10px;z-index:2500;background:rgba(0,0,0,.84);border:1px solid #666;color:#ddd;padding:8px 10px;font:11px/1.35 monospace;white-space:pre;display:none;pointer-events:none;max-width:460px}
-.bw-fluid-water{box-shadow:0 0 8px rgba(80,180,255,.35)}
-</style>
-
-<style id="bw-mc-ui-v24">
-/* ===== v24 Minecraft-like UI ===== */
-:root{--mc-gray:#c6c6c6;--mc-dark:#555;--mc-darker:#222;--mc-border:#f5f5f5;--mc-shadow:#3a3a3a}
-body{cursor:default}
-#lobby{background-image:var(--lobby-overlay,linear-gradient(180deg,rgba(8,12,20,.28),rgba(8,10,16,.55))),var(--lobby-bg,linear-gradient(#18222c,#080b10));background-size:cover,cover;background-position:center,center}
-#lobby:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 35%,rgba(0,0,0,.45));pointer-events:none}
-.lobby-panel{position:relative!important;background:rgba(20,20,20,.72)!important;border:2px solid #777!important;border-top-color:#bbb!important;border-left-color:#bbb!important;box-shadow:0 10px 35px rgba(0,0,0,.65)!important;border-radius:0!important}
-.mc-btn{border-radius:0!important;min-height:42px!important;text-shadow:2px 2px #222!important;box-shadow:inset 0 2px rgba(255,255,255,.16),inset 0 -2px rgba(0,0,0,.35),0 2px 0 #111!important;transition:filter .08s,transform .05s!important}
-.mc-btn:hover{filter:brightness(1.16)!important}.mc-btn:active{transform:translateY(2px)!important}
-.window{background:#c6c6c6!important;border:4px solid!important;border-color:#fff #555 #555 #fff!important;border-radius:0!important;box-shadow:8px 8px 0 rgba(0,0,0,.55)!important;color:#222!important}
-.window h2,.inv-title{font-weight:bold!important;text-shadow:1px 1px #fff!important}
-#win-inventory{width:620px!important;padding:14px 16px!important;background:#c6c6c6!important;border-radius:0!important}
-.inv-top{min-height:190px!important;display:grid!important;grid-template-columns:82px 210px 1fr!important;gap:14px!important;align-items:center!important}
-.inv-skin-box{width:210px!important;height:190px!important;background:linear-gradient(#8b8b8b,#555)!important;border:3px solid!important;border-color:#333 #eee #eee #333!important;cursor:crosshair!important}
-.inv-skin-stage{width:128px!important;height:256px!important;transform:scale(.62) translateX(10px) translateY(-4px)!important}
-.inv-skin-model{transform:rotateY(0deg) rotateX(-4deg)!important;transform-origin:50% 55%!important}
-.inv-info{background:rgba(0,0,0,.08);padding:12px!important;border:2px solid #999!important;box-shadow:inset 2px 2px #777,inset -2px -2px #eee!important}
-.inv-grid{gap:4px!important}
-.inv-slot{border-radius:0!important;background:#8b8b8b!important;border-color:#373737 #fff #fff #373737!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)!important}
-.inv-slot:hover{background:#a9a9a9!important;transform:translateY(-1px)}
-.inv-slot.inv-active{background:#aaaaff!important;border-color:#3333aa #fff #fff #3333aa!important}
-#pause-menu,#ingame-menu{background:rgba(0,0,0,.58)!important;backdrop-filter:blur(2px)}
-#pause-menu>div,#ingame-menu>div{background:rgba(20,20,20,.96)!important;border:3px solid #888!important;border-top-color:#ddd!important;border-left-color:#ddd!important;border-radius:0!important;box-shadow:8px 8px 0 rgba(0,0,0,.65)!important}
-#pause-menu .mc-btn,#ingame-menu .mc-btn{width:360px!important}
-#bw-v24-menu-title{font-size:34px;color:#fff;text-shadow:3px 3px #000;letter-spacing:2px;margin-bottom:24px}
-#bw-v24-crosshair-cursor{position:fixed;width:12px;height:12px;pointer-events:none;z-index:10000;display:none}
-#bw-v24-crosshair-cursor:before,#bw-v24-crosshair-cursor:after{content:"";position:absolute;background:#fff;box-shadow:1px 1px #000}
-#bw-v24-crosshair-cursor:before{width:12px;height:2px;left:0;top:5px}#bw-v24-crosshair-cursor:after{height:12px;width:2px;left:5px;top:0}
-#bw-inv-help{font-size:11px;color:#555;margin-top:8px;text-align:right}
-#bw-shop-v24{font-family:'VT323',monospace}
-#bw-shop-v24 .shop-section{color:#222;font-size:14px;margin:4px 0 6px}
-#bw-shop-v24 .shop-card{background:#8b8b8b!important;border:3px solid!important;border-color:#eee #444 #444 #eee!important;padding:5px!important;border-radius:0!important}
-#bw-shop-v24 .btn-buy{border-radius:0!important;background:#666!important;color:#fff!important}
-#bw-drop-shadow{position:fixed;pointer-events:none;z-index:40;width:1px;height:1px}
-</style>
-</head>
-<body>
-<div id="damage-flash"></div><div id="damage-hit-vignette"></div>
-<div id="bw-profile-chip" style="position:fixed;top:8px;left:8px;z-index:1600;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.72);border:1px solid #555;padding:6px 10px;pointer-events:none">
-  <img id="bw-profile-face" alt="" style="width:36px;height:36px;image-rendering:pixelated;border:1px solid #777;background:#222;object-fit:cover">
-  <div>
-    <div id="bw-profile-name" style="font-size:14px;color:#fff;text-shadow:1px 1px #000">Player</div>
-    <div id="bw-profile-stats" style="font-size:12px;color:#9cf">Lv.1  Kill 0  Win 0</div>
-    <div id="bw-profile-account" style="font-size:10px;color:#888"></div>
-  </div>
-</div>
-<div id="bw-touch-ui" style="display:none;position:fixed;inset:0;z-index:90;pointer-events:none">
-  <div id="bw-touch-joy" style="pointer-events:auto;position:absolute;left:18px;bottom:90px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.28)">
-    <div id="bw-touch-knob" style="position:absolute;left:45px;top:45px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.45)"></div>
-  </div>
-  <div id="bw-touch-look" style="pointer-events:auto;position:absolute;right:0;top:0;width:55%;height:62%"></div>
-  <div style="pointer-events:auto;position:absolute;right:12px;bottom:78px;display:grid;grid-template-columns:56px 56px 56px;gap:7px">
-    <button class="mc-btn" id="bw-touch-jump" style="font-size:12px;padding:10px 0">ジャンプ</button>
-    <button class="mc-btn" id="bw-touch-sprint" style="font-size:12px;padding:10px 0">ダッシュ</button>
-    <button class="mc-btn" id="bw-touch-sneak" style="font-size:12px;padding:10px 0">しゃがみ</button>
-    <button class="mc-btn" id="bw-touch-atk" style="font-size:12px;padding:10px 0">攻撃</button>
-    <button class="mc-btn" id="bw-touch-place" style="font-size:12px;padding:10px 0">設置</button>
-    <button class="mc-btn" id="bw-touch-inv" style="font-size:12px;padding:10px 0">インベ</button>
-    <button class="mc-btn" id="bw-touch-shop" style="font-size:12px;padding:10px 0">ショップ</button>
-    <button class="mc-btn" id="bw-touch-chat" style="font-size:12px;padding:10px 0">チャット</button>
-  </div>
-</div>
-
-<!-- ===== LOBBY ===== -->
-<div id="lobby">
-  <div class="lobby-panel">
-    <div style="text-align:center;margin-bottom:18px;position:relative">
-      <div style="font-family:'VT323',monospace;font-size:62px;color:#ffcc00;text-shadow:4px 4px 0 #b8860b,2px 2px 0 #000;letter-spacing:2px;line-height:1">⚔ BedWars</div>
-      <div style="font-family:'VT323',monospace;font-size:22px;color:#c0c0c0;letter-spacing:6px;text-transform:uppercase;margin-top:-4px">Ultimate Edition</div>
-      <button onclick="toggleBgSelector()" style="position:absolute;top:0;right:0;background:rgba(0,0,0,0.5);border:1px solid #666;color:#ccc;font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer">🖼️ 背景を変更</button>
-      <div id="bg-selector" style="display:none;position:absolute;top:24px;right:0;background:rgba(10,10,15,0.95);border:1px solid #555;border-radius:6px;padding:10px;z-index:50;width:220px">
-        <div style="color:#aaa;font-size:11px;margin-bottom:6px">タイトル背景を選択</div>
-        <div id="bg-thumb-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px"></div>
-        <label style="display:block;color:#aaa;font-size:11px;margin-bottom:4px">📁 画像アップロード</label>
-        <input type="file" id="bg-file-input" accept="image/*" style="font-size:11px;width:100%">
-      </div>
-    </div>
-
-    <div class="lobby-layout">
-      <!-- Skin viewer -->
-      <div class="skin-viewer-wrap">
-        <div class="skin-box" id="lobby-skin-box">
-          <div class="stage-3d">
-            <div class="char-model-3d skin-walk" id="lobby-model">
-              <div class="box-3d head-3d"><div class="face hd-f"></div><div class="face hd-b"></div><div class="face hd-l"></div><div class="face hd-r"></div><div class="face hd-u"></div><div class="face hd-d"></div></div>
-              <div class="box-3d body-3d"><div class="face bd-f"></div><div class="face bd-b"></div><div class="face bd-l"></div><div class="face bd-r"></div><div class="face bd-u"></div><div class="face bd-d"></div></div>
-              <div class="box-3d r-arm-3d"><div class="face ra-f"></div><div class="face ra-b"></div><div class="face ra-l"></div><div class="face ra-r"></div><div class="face ra-u"></div><div class="face ra-d"></div></div>
-              <div class="box-3d l-arm-3d"><div class="face la-f"></div><div class="face la-b"></div><div class="face la-l"></div><div class="face la-r"></div><div class="face la-u"></div><div class="face la-d"></div></div>
-              <div class="box-3d r-leg-3d"><div class="face rl-f"></div><div class="face rl-b"></div><div class="face rl-l"></div><div class="face rl-r"></div><div class="face rl-u"></div><div class="face rl-d"></div></div>
-              <div class="box-3d l-leg-3d"><div class="face ll-f"></div><div class="face ll-b"></div><div class="face ll-l"></div><div class="face ll-r"></div><div class="face ll-u"></div><div class="face ll-d"></div></div>
-            </div>
-          </div>
-        </div>
-        <label class="skin-upload-btn">📁 スキン<input type="file" id="skin-file" accept="image/png" style="display:none"></label>
-      </div>
-
-      <!-- Info + player list -->
-      <div class="lobby-info">
-        <input type="text" id="player-name" class="mc-input" placeholder="プレイヤー名..." value="Player1" maxlength="16">
-        <div id="supabase-connection-status" style="font-size:12px;color:#888;text-align:center;margin-top:4px">Supabase: 接続準備中...</div>
-
-        <div id="bw-lobby-account-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;padding:6px 8px;background:rgba(0,0,0,0.28);border:1px solid #444;border-radius:4px">
-          <div id="bw-lobby-login-status" style="font-size:12px;color:#888;flex:1">🔓 未ログイン</div>
-          <button class="mc-btn" style="padding:4px 10px;font-size:12px;background:#3a5a8a" onclick="openSettings()">ログイン / 設定</button>
-        </div>
-        <div id="bw-online-panel" style="margin-top:8px;padding:8px;background:rgba(0,0,0,0.35);border:1px solid #333;border-radius:4px">
-          <div style="font-size:12px;color:#88ff88;margin-bottom:4px">🟢 オンラインのプレイヤー</div>
-          <div id="bw-online-list" style="font-size:12px;color:#bbb;max-height:92px;overflow-y:auto">読み込み中...</div>
-          <div id="bw-queue-banner" style="margin-top:6px;font-size:12px;color:#9cf">対戦申請: 確認中...</div>
-        </div>
-
-        <!-- v27追記: 管理者パネル(プレイヤー一覧+削除) -->
-        <div id="bw-admin-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:6000">
-          <div style="max-width:600px;margin:60px auto;background:#1a1a1a;border:2px solid #884400;border-radius:6px;padding:16px;max-height:80vh;overflow-y:auto">
-            <h2 style="color:#ff9944;margin-top:0">🛡️ 管理者パネル</h2>
-            <p style="color:#888;font-size:12px">重複/古いプレイヤーの行をまとめて削除できます(bw_players/bw_lobby/bw_history/bw_friends全て)。</p>
-            <div style="margin:8px 0;padding:8px;background:#111;border:1px solid #553">
-              <div style="color:#ffcc66;font-size:12px;margin-bottom:4px">全ユーザーのロビー背景</div>
-              <input id="bw-admin-bg-url" class="mc-input" placeholder="画像URL または none" style="width:100%;font-size:12px">
-              <input id="bw-admin-bg-file" type="file" accept="image/*" style="width:100%;margin-top:6px;color:#ddd;font-size:11px">
-              <button class="mc-btn" style="margin-top:6px;width:100%;background:#445522" onclick="window._bwAdminSetLobbyBg()">URLで配信</button>
-              <button class="mc-btn" style="margin-top:4px;width:100%;background:#335566" onclick="window._bwAdminUploadLobbyBg()">画像をアップロードして配信</button>
-            </div>
-            <button class="mc-btn" style="margin-bottom:8px;background:#3a6a3a" onclick="loadAdminPlayerList()">🔄 一覧を更新</button>
-            <div id="bw-admin-player-list" style="font-size:12px"></div>
-            <button class="mc-btn" style="width:100%;margin-top:10px;background:#663333" onclick="document.getElementById('bw-admin-panel').style.display='none'">閉じる</button>
-          </div>
-        </div>
-
-        <div id="bw-wait-lobby" style="display:none">
-        <label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:12px;margin-top:6px;cursor:pointer">
-          <input type="checkbox" id="join-as-spectator-check" style="width:15px;height:15px">
-          👁️ 観戦のみで参加（対戦には参加せず見るだけ）
-        </label>
-        <div class="player-list" id="player-list"></div>
-        </div>
-        <div class="lobby-status" id="lobby-status">モードを選んでください</div>
-        <div id="host-controls" style="display:none">
-          <div class="team-mode-row">
-            <label>チーム数:</label>
-            <button class="mc-btn btn-blue" id="btn-2team" onclick="setTeamMode(2)" style="font-size:19px;padding:5px 14px">2チーム</button>
-            <button class="mc-btn" id="btn-4team" onclick="setTeamMode(4)" style="font-size:19px;padding:5px 14px">4チーム</button>
-          </div>
-          <button class="mc-btn btn-gold" onclick="hostStartGame()" style="margin-top:6px;width:100%;font-size:24px">▶ スタート！</button>
-        </div>
-        <div id="guest-controls" style="display:none">
-          <div style="color:#ffaa00;font-size:16px;text-align:center;padding:8px 0">
-            ⏳ ホストの開始を待っています...
-          </div>
-          <button class="mc-btn" onclick="leaveLobbyToTitle()" style="width:100%;font-size:16px;background:#555">✕ 退出してタイトルへ戻る</button>
-        </div>
-        <div class="lobby-stats">Lv.<span class="stat-v" id="lobby-level">1</span> 総合 Kill:<span class="stat-v" id="lobby-kills">0</span> Win:<span class="stat-v" id="lobby-wins">0</span><br>シーズン Kill:<span class="stat-v" id="lobby-season-kills">0</span> Win:<span class="stat-v" id="lobby-season-wins">0</span></div>
-      </div>
-    </div>
-
-    <div style="border-top:2px solid #444;padding-top:14px;margin-top:8px;display:flex;flex-direction:column;gap:8px">
-      <!-- マップ選択（手動 or ランダム） -->
-      <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);padding:6px 10px;border-radius:4px">
-        <span style="color:#aaa;font-size:12px;white-space:nowrap">🗺️ マップ:</span>
-        <select id="map-theme-select" onchange="setMapTheme(this.value)" style="flex:1;background:#222;color:#fff;border:1px solid #555;border-radius:3px;padding:4px;font-size:12px">
-          <option value="random">🎲 ランダム</option>
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="mc-btn" onclick="startGame('solo')" style="font-size:20px;padding:10px;background:linear-gradient(180deg,#5a7a3a,#3a5a1a);border-color:#8aaa6a #1a3a0a #1a3a0a #8aaa6a">
-          🤖 ソロ (VS AI)
-        </button>
-        <button class="mc-btn btn-blue" onclick="joinLobby()" style="font-size:20px;padding:10px;background:linear-gradient(180deg,#3a5aaa,#1a3a8a);border-color:#6a8ada #0a1a5a #0a1a5a #6a8ada">
-          🌐 オンライン対戦
-        </button>
-      </div>
-      <button class="mc-btn" onclick="window._bwOpenQueuePanel()" style="width:100%;font-size:16px;padding:8px;background:linear-gradient(180deg,#2d6a9a,#1a4468);border-color:#7ec8ff #123 #123 #7ec8ff">
-        ⏳ 対戦待ち / プライベート戦
-      </button>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="mc-btn btn-gold" onclick="startTraining('bridge')" style="font-size:18px;padding:8px">🧱 ブリッジ練習</button>
-        <button class="mc-btn btn-gold" onclick="startTraining('parkour')" style="font-size:18px;padding:8px">🏃 パルクール練習</button>
-      </div>
-      <button id="bw-debug-arena-btn" class="mc-btn" onclick="startDebugArena()" style="display:none;width:100%;font-size:16px;padding:8px;margin-top:2px;background:linear-gradient(180deg,#663388,#442266);border-color:#aa66dd #221144 #221144 #aa66dd">
-        🧪 検証ステージ（1島にAI+模擬プレイヤーを至近距離配置。別タブ不要）
-      </button>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="mc-btn btn-gold" onclick="openFriendUI()" style="font-size:18px;padding:8px;background:linear-gradient(180deg,#aa8800,#886600);border-color:#ddaa00 #553300 #553300 #ddaa00">
-          👥 フレンド & ランキング
-        </button>
-        <button class="mc-btn" onclick="openSettings()" style="font-size:18px;padding:8px;background:linear-gradient(180deg,#555,#333);border-color:#888 #222 #222 #888">
-          ⚙️ 設定
-        </button>
-      </div>
-    </div>
-    <!-- ロビーチャット -->
-    <div style="margin-top:14px;border-top:2px solid #333;padding-top:10px">
-      <div style="color:#ffaa00;font-size:13px;margin-bottom:6px">💬 ロビーチャット</div>
-      <div id="lobby-chat-log" style="height:100px;overflow-y:auto;background:#0a0a0a;border:1px solid #333;border-radius:4px;padding:6px;margin-bottom:6px;font-size:12px;color:#ccc"></div>
-      <div style="display:flex;gap:6px">
-        <input type="text" id="lobby-chat-input" placeholder="チャットを打ってEnter..." style="flex:1;padding:6px;background:#222;color:#fff;border:1px solid #444;border-radius:3px;font-size:12px;outline:none">
-        <button onclick="sendLobbyChat()" style="padding:6px 12px;background:#444;color:#fff;border:1px solid #555;border-radius:3px;cursor:pointer">送信</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== HUD ===== -->
-<div id="crosshair"></div>
-<div id="break-progress"><div id="break-bar"></div></div>
-<div id="bow-charge-v2"><div class="bow-title">🏹 弓を引いています</div><div class="bow-track"><div class="bow-fill" id="bow-fill-v2"></div></div><div class="bow-info"><span id="bow-percent-v2">0%</span><span id="bow-power-v2">威力 0%</span></div></div>
-<div id="announcement"></div>
-
-<!-- v8: チャットUI（スコープラベル付き） -->
-<div id="chat-overlay" style="position:fixed;bottom:100px;left:20px;width:320px;max-height:200px;background:rgba(0,0,0,0.65);border-radius:6px;overflow-y:auto;display:none;z-index:90;padding:8px"></div>
-<div id="chat-input-box" style="position:fixed;bottom:10px;left:20px;width:340px;display:none;z-index:100;background:rgba(0,0,0,0.95);border:2px solid #555;border-radius:4px;overflow:hidden">
-  <div id="chat-scope-label" style="background:#333;color:#ffaa00;font-size:11px;padding:3px 8px;border-bottom:1px solid #555">全体へ</div>
-  <input type="text" id="chat-input" placeholder="メッセージ (Enter送信 / Esc閉じる)" style="width:100%;padding:7px;background:#1a1a1a;color:#fff;border:none;font-size:12px;outline:none;box-sizing:border-box">
-</div>
-
-<!-- v8: 設定画面 -->
-<!-- v11: 設定画面 (35項目完全版) -->
-<div id="settings-panel" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.86);z-index:3000;overflow-y:auto">
-  <div class="bw-mc-options" style="max-width:880px;margin:20px auto;background:#c6c6c6;border:4px solid #fff;border-right-color:#373737;border-bottom-color:#373737;padding:16px 18px;color:#202020">
-    <h2 style="color:#2b2b2b;margin:0 0 10px;font-size:24px;text-align:center;text-shadow:1px 1px #fff">オプション</h2>
-    <div id="bw-opt-tabs" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px"></div>
-        <div id="bw-login-box" style="margin:0 0 18px;padding:10px;background:rgba(0,0,0,0.35);border-radius:4px;border:1px solid #444">
-          <div class="set-section" style="margin-top:0">🔐 アカウント / ログイン</div>
-          <div id="bw-login-status" style="font-size:12px;color:#888;text-align:center;margin-bottom:6px">🔓 未ログイン(このブラウザだけの一時アカウント)</div>
-          <div id="bw-login-form" style="display:flex;gap:6px">
-            <input type="email" id="bw-login-email" placeholder="Gmailアドレス" class="mc-input" style="flex:1;font-size:12px;padding:5px" autocomplete="email">
-            <button class="mc-btn" id="bw-send-code-btn" style="padding:5px 10px;font-size:12px;background:#3a6a3a" onclick="bwSendLoginLink()">コード送信</button>
-          </div>
-          <div id="bw-login-hint" style="font-size:11px;color:#888;margin-top:4px;text-align:center">メール本文の6桁コードを入力します(リンクは使いません)</div>
-          <div id="bw-login-code-row" style="display:none;gap:6px;margin-top:6px">
-            <input type="text" id="bw-login-code" placeholder="6桁コード" class="mc-input" style="flex:1;font-size:16px;padding:5px;letter-spacing:4px;text-align:center" maxlength="8" inputmode="numeric" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')bwVerifyLoginCode()">
-            <button class="mc-btn" style="padding:5px 10px;font-size:12px;background:#2a5a8a" onclick="bwVerifyLoginCode()">認証</button>
-          </div>
-          <button class="mc-btn" id="bw-google-login-btn" style="width:100%;margin-top:6px;padding:5px;font-size:12px;background:#444" onclick="bwLoginWithGoogle()">🔵 Googleでログイン</button>
-          <button class="mc-btn" id="bw-logout-btn" style="width:100%;margin-top:6px;padding:5px;font-size:12px;background:#663333;display:none" onclick="bwLogout()">ログアウト</button>
-          <button class="mc-btn" id="bw-admin-btn" style="width:100%;margin-top:6px;padding:6px;font-size:12px;background:#884400;display:none" onclick="openAdminPanel()">🛡️ 管理者パネル(プレイヤー管理)</button>
-        </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-
-      <!-- 左列: ゲームプレイ・グラフィック -->
-      <div>
-        <div class="set-section">🎮 ゲームプレイ</div>
-        <label class="set-label">オートスプリント <input type="checkbox" id="set-autoSprint" onchange="setToggle('autoSprint',this.checked)"></label>
-        <label class="set-label">スニーク切替 <input type="checkbox" id="set-toggleSneak" onchange="setToggle('toggleSneak',this.checked)"></label>
-        <label class="set-label">オートブリッジアシスト <input type="checkbox" id="set-autoBridge" onchange="setToggle('autoBridge',this.checked)"></label>
-        <label class="set-label">ブロックプレビュー <input type="checkbox" id="set-blockPreview" onchange="setToggle('blockPreview',this.checked)"></label>
-        <label class="set-label">スロット固定 <input type="checkbox" id="set-hotbarLock" onchange="setToggle('hotbarLock',this.checked)"></label>
-        <label class="set-label">スマートリスポーン <input type="checkbox" id="set-smartRespawn" onchange="setToggle('smartRespawn',this.checked)"></label>
-        <label class="set-label">スロットホイール切替 <input type="checkbox" id="set-scrollSlot" onchange="setToggle('scrollSlot',this.checked)"></label>
-        <label class="set-label">ブロック面ハイライト <input type="checkbox" id="set-faceHighlight" onchange="setToggle('faceHighlight',this.checked)" checked></label>
-
-        <div class="set-section" style="margin-top:12px;color:#ff5555">😈 鬼畜モード</div>
-        <label class="set-label">鬼畜モード(色彩反転+RTA) <input type="checkbox" id="set-kishiku" onchange="toggleKishikuMode(this.checked)"></label>
-        <label class="set-label">画質を荒くする <input type="checkbox" id="set-kishikuUgly" onchange="setToggle('kishikuUgly',this.checked)"></label>
-
-        <div class="set-section" style="margin-top:12px">🎨 グラフィック</div>
-        <label class="set-label">FOV: <span id="lbl-fov">70</span>°
-          <input type="range" id="set-fov" min="50" max="120" value="70" oninput="applySettings()"></label>
-        <label class="set-label">ダイナミックFOV <input type="checkbox" id="set-dynamicFOV" onchange="setToggle('dynamicFOV',this.checked)" checked></label>
-        <label class="set-label">描画距離: <span id="lbl-draw">150</span>
-          <input type="range" id="set-draw" min="40" max="400" value="150" oninput="applySettings()"></label>
-        <label class="set-label">テクスチャ品質:
-          <select id="set-tex" onchange="applySettings()">
-            <option value="2">高</option><option value="1" selected>標準</option><option value="0.5">低</option>
-          </select></label>
-        <label class="set-label">ビューボビング <input type="checkbox" id="set-viewBobbing" onchange="setToggle('viewBobbing',this.checked)" checked></label>
-        <label class="set-label">アニメ強度: <span id="lbl-anim">70</span>%
-          <input type="range" id="set-anim" min="0" max="100" value="70" oninput="applySettings()"></label>
-        <label class="set-label">被弾シェイク <input type="checkbox" id="set-screenShake" onchange="setToggle('screenShake',this.checked)" checked></label>
-        <label class="set-label">パーティクル <input type="checkbox" id="set-particles" onchange="setToggle('particles',this.checked)" checked></label>
-        <label class="set-label">軽量化モード <input type="checkbox" id="set-liteMode" onchange="setToggle('liteMode',this.checked);window._bwApplyLiteMode(this.checked)"></label>
-        <label class="set-label">明るさ: <span id="lbl-gamma">1.0</span>
-          <input type="range" id="set-gamma" min="10" max="20" value="10" step="1" oninput="applySettings()"></label>
-        <label class="set-label">空のタイプ:
-          <select id="set-sky" onchange="applySettings()">
-            <option value="day">昼</option><option value="evening">夕方</option>
-            <option value="night">夜</option><option value="cycle">サイクル</option>
-          </select></label>
-        <label class="set-label">影:
-          <select id="set-shadow" onchange="applySettings()">
-            <option value="off">OFF</option><option value="low">LOW</option><option value="high">HIGH</option>
-          </select></label>
-        <label class="set-label">描画強化:
-          <select id="set-visualQuality" onchange="window._bwSetVisualQuality(this.value)">
-            <option value="standard">標準</option><option value="enhanced">高精細</option><option value="cinematic">シネマ</option>
-          </select></label>
-        <label class="set-label">流体シミュレーション <input type="checkbox" id="set-fluid" checked onchange="window._bwFluidEnabled=this.checked"></label>
-
-        <div class="set-section" style="margin-top:12px;color:#88ccff">🌓 影MOD設定</div>
-        <label class="set-label">影を有効化 <input type="checkbox" id="set-shadowOn" checked onchange="window._bwSetShadowEnabled(this.checked)"></label>
-        <label class="set-label">影の濃さ:
-          <input type="range" id="set-shadowStrength" min="0" max="100" value="60" oninput="window._bwSetShadowStrength(this.value)">
-        </label>
-        <label class="set-label">影の柔らかさ:
-          <input type="range" id="set-shadowSoftness" min="0" max="100" value="40" oninput="window._bwSetShadowSoftness(this.value)">
-        </label>
-        <label class="set-label">投影範囲(狭い=くっきり/広い=遠くまで):
-          <input type="range" id="set-shadowRange" min="20" max="80" value="48" oninput="window._bwSetShadowRange(this.value)">
-        </label>
-
-        <div class="set-section" style="margin-top:12px;color:#ffcc55">🧪 実験的機能</div>
-        <label class="set-label">実験的シェーダーを有効化 <input type="checkbox" id="set-expGraphics" onchange="window._bwSetExperimentalGraphics(this.checked)"></label>
-        <label class="set-label">ポストエフェクト(実験的):
-          <select id="bw-shader-mode" onchange="window._bwSetShaderMode(this.value)">
-            <option value="vanilla">なし(標準)</option>
-            <option value="vivid">ビビッド</option>
-            <option value="cinematic">シネマティック</option>
-            <option value="toon">トゥーン</option>
-            <option value="night">ナイト</option>
-          </select></label>
-        <label class="set-label">スキン描画精度(実験的・3段階):
-          <select id="set-skinRealism" onchange="window._bwSetSkinRealism(this.value)">
-            <option value="low">低(軽量・荒い)</option>
-            <option value="mid" selected>中(標準)</option>
-            <option value="high">高(なめらか・重い)</option>
-          </select></label>
-      </div>
-
-      <!-- 右列: HUD・操作・サウンド -->
-      <div>
-        <div class="set-section">📊 HUD</div>
-        <label class="set-label">クロスヘア:
-          <select id="set-crosshair" onchange="applySettings()">
-            <option value="cross">＋</option><option value="dot">・</option>
-            <option value="circle">○</option><option value="none">非表示</option>
-          </select></label>
-        <label class="set-label">UIスケール:
-          <select id="set-uiscale" onchange="applySettings()">
-            <option value="0.8">小</option><option value="1" selected>中</option><option value="1.2">大</option>
-          </select></label>
-        <label class="set-label">CPS表示 <input type="checkbox" id="set-showCps" onchange="setToggle('showCps',this.checked)"></label>
-        <label class="set-label">FPS/座標表示 <input type="checkbox" id="set-showDebug" onchange="setToggle('showDebug',this.checked)" checked></label>
-        <label class="set-label">当たり判定/視線/AI思考の可視化 <input type="checkbox" id="set-showHitboxDebug" onchange="window._bwSetHitboxDebug(this.checked)"></label>
-        <label class="set-label">防具表示 <input type="checkbox" id="set-showArmor" onchange="setToggle('showArmor',this.checked)" checked></label>
-        <label class="set-label">敵HPバー <input type="checkbox" id="set-showEnemyHp" onchange="setToggle('showEnemyHp',this.checked)" checked></label>
-        <label class="set-label">ボスバー/タイマー <input type="checkbox" id="set-showTimer" onchange="setToggle('showTimer',this.checked)" checked></label>
-        <label class="set-label">ダメージ数値 <input type="checkbox" id="set-dmgIndicator" onchange="setToggle('dmgIndicator',this.checked)" checked></label>
-
-        <div class="set-section" style="margin-top:12px">🖱️ 操作</div>
-        <label class="set-label">感度: <span id="lbl-sens">0.15</span>
-          <input type="range" id="set-sens" min="1" max="50" value="15" oninput="applySettings()"></label>
-        <label class="set-label">Y軸反転 <input type="checkbox" id="set-invertY" onchange="setToggle('invertY',this.checked)"></label>
-        <label class="set-label">操作方法:
-          <select id="set-controlScheme" onchange="window._bwSetControlScheme(this.value)">
-            <option value="kbm" selected>キーボード / マウス</option>
-            <option value="touch">タッチ (PE風)</option>
-          </select>
-        </label>
-        <label class="set-label" id="bw-demo-row" style="color:#ffcc66">Demo Player（履歴に残さないゲスト）
-          <input type="checkbox" id="set-demoPlayer" onchange="window._bwSetDemoPlayer(this.checked)">
-        </label>
-
-        <div class="set-section" style="margin-top:12px">🔊 サウンド</div>
-        <label class="set-label">主音量: <span id="lbl-vol">80</span>%
-          <input type="range" id="set-vol" min="0" max="100" value="80" oninput="applySettings()"></label>
-        <label class="set-label">BGM音量: <span id="lbl-bgm">60</span>%
-          <input type="range" id="set-bgm" min="0" max="100" value="60" oninput="applySettings()"></label>
-        <label class="set-label">効果音: <span id="lbl-sfx">80</span>%
-          <input type="range" id="set-sfx" min="0" max="100" value="80" oninput="applySettings()"></label>
-        <label class="set-label">空間オーディオ <input type="checkbox" id="set-spatialAudio" onchange="setToggle('spatialAudio',this.checked)" checked></label>
-        <label class="set-label">ベッド破壊アラート <input type="checkbox" id="set-bedAlert" onchange="setToggle('bedAlert',this.checked)" checked></label>
-
-        <div class="set-section" style="margin-top:12px">⌨️ キー設定</div>
-        <div id="keybind-list" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px"></div>
-      </div>
-    </div>
-
-    <div style="text-align:center;margin-top:20px;display:flex;gap:12px;justify-content:center">
-      <button class="mc-btn" onclick="saveSettings()" style="font-size:17px">💾 保存</button>
-      <button class="mc-btn btn-red" onclick="closeSettings()" style="font-size:17px">✕ 閉じる</button>
-      <button class="mc-btn" onclick="resetSettings()" style="font-size:15px;background:#555">↩ リセット</button>
-    </div>
-    <div style="margin-top:14px;border-top:1px solid #555;padding-top:10px">
-      <div class="set-section">🔖 クイック設定</div>
-      <div style="font-size:12px;color:#333;margin-bottom:6px">保存する項目</div>
-      <label class="set-label"><input type="checkbox" id="bw-ps-gfx" checked> グラフィック</label>
-      <label class="set-label"><input type="checkbox" id="bw-ps-ctrl" checked> 操作・FOV</label>
-      <label class="set-label"><input type="checkbox" id="bw-ps-snd" checked> サウンド</label>
-      <label class="set-label"><input type="checkbox" id="bw-ps-keys"> キー設定</label>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <button class="mc-btn" onclick="window._bwSavePreset()">この内容で保存</button>
-        <button class="mc-btn" id="bw-ps-bind" onclick="window._bwBindPresetKey()">キー割り当て</button>
-      </div>
-      <div id="bw-preset-list" style="margin-top:8px;font-size:12px"></div>
-    </div>
-  </div>
-</div>
-
-<!-- v8: 終了画面 -->
-<!-- v9: ソロ一時停止メニュー -->
-<div id="pause-menu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.72);z-index:5000">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:3px solid #555;border-radius:8px;padding:32px 40px;text-align:center;min-width:280px">
-    <div style="font-size:28px;color:#fff;font-weight:bold;margin-bottom:24px">⏸ 一時停止</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="mc-btn" onclick="resumeGame()" style="font-size:18px">▶ ゲームに戻る</button>
-      <button class="mc-btn" onclick="closeIngameMenu();openSettings();" style="font-size:18px">⚙️ 設定</button>
-      <button class="mc-btn btn-red" onclick="location.reload()" style="font-size:18px">🚪 タイトルに戻る</button>
-    </div>
-  </div>
-</div>
-<!-- v9: マルチ中ゲーム内メニュー -->
-<div id="ingame-menu" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.72);z-index:5000">
-  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a1a;border:3px solid #555;border-radius:8px;padding:32px 40px;text-align:center;min-width:300px">
-    <div style="font-size:28px;color:#fff;font-weight:bold;margin-bottom:24px">🌐 メニュー</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="mc-btn" onclick="closeIngameMenu()" style="font-size:18px">▶ ゲームに戻る</button>
-      <button class="mc-btn" onclick="closeIngameMenu();openSettings();" style="font-size:18px">⚙️ 設定</button>
-      <button class="mc-btn btn-gold" onclick="closeIngameMenu();openFriendUI();" style="font-size:16px">👥 フレンド & ランキング</button>
-      <button class="mc-btn btn-red" onclick="typeof leaveToLobby==='function'?leaveToLobby():location.reload()" style="font-size:18px">🚪 ロビーに戻る</button>
-    </div>
-  </div>
-</div>
-
-<div id="end-screen" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:4000;overflow:hidden">
-  <!-- 背景: 島がくるくる -->
-  <canvas id="end-bg-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:0"></canvas>
-  <!-- 成績パネル -->
-  <div id="end-panel" style="position:relative;z-index:10;max-width:600px;margin:40px auto;background:rgba(0,0,0,0.88);border:3px solid #ffaa00;border-radius:10px;padding:30px">
-    <h2 id="end-title" style="text-align:center;font-size:42px;margin:0 0 16px;color:#ffaa00">🏆 試合終了</h2>
-    <div id="end-result" style="text-align:center;font-size:22px;color:#fff;margin-bottom:20px"></div>
-    <div id="end-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;text-align:center;margin-bottom:20px"></div>
-    <div id="end-ranking" style="margin-bottom:16px"></div>
-    <!-- 終了画面チャット -->
-    <div id="end-chat-area" style="border:2px solid #444;border-radius:4px;overflow:hidden;margin-bottom:16px">
-      <div style="background:#222;padding:4px 8px;font-size:11px;color:#888">試合後チャット (全員に届きます)</div>
-      <div id="end-chat-log" style="max-height:120px;overflow-y:auto;padding:6px;background:#111;font-size:12px"></div>
-      <div style="display:flex;border-top:1px solid #333">
-        <input type="text" id="end-chat-input" placeholder="メッセージを入力..." style="flex:1;padding:6px;background:#1a1a1a;color:#fff;border:none;outline:none;font-size:12px">
-        <button onclick="sendEndChat()" style="padding:6px 12px;background:#444;color:#fff;border:none;cursor:pointer;border-left:1px solid #333">送信</button>
-      </div>
-    </div>
-    <div style="text-align:center">
-      <button class="mc-btn btn-green" onclick="leaveToLobby()" style="font-size:20px;width:100%">🚪 ロビーに戻る</button>
-      <button class="mc-btn" onclick="window._bwKeepSpectating()" style="font-size:16px;width:100%;margin-top:8px;background:#335">👁 観戦を続ける</button>
-    </div>
-  </div>
-</div>
-<div id="view-badge-overlay">👁 三人称視点</div>
-
-<div id="mp-overlay">
-  <span id="mp-status">🌐 接続中...</span>
-  <div id="mp-players"></div>
-</div>
-
-<div id="scoreboard">
-  <h3>🛏 BedWars</h3>
-  <div id="sb-entries"></div>
-  <div class="sb-line" style="margin-top:6px;border-top:1px solid #555;padding-top:4px;color:#ccc">
-    <span>Kills</span><span id="hud-kills">0</span>
-  </div>
-</div>
-
-<div id="hud">
-  <div style="font-size:18px;color:#ffff88;margin-bottom:4px;text-shadow:2px 2px 0 #000"><span id="hud-player-name">Player1</span></div>
-  <div class="hud-bar" style="color:#ff5555">❤ <span id="hp">20</span>/<span id="hp-max">20</span></div>
-  <div class="hud-bar" style="color:#FFAA00">🍗 <span id="hunger">20</span>/20</div>
-  <div class="hud-bar" style="color:#55ffff">💎 <span id="res-dia">0</span></div>
-  <div class="hud-bar" style="color:#55ff55">💚 <span id="res-em">0</span></div>
-  <span id="status-msg"></span>
-  <span id="view-badge"></span>
-</div>
-<!-- ホットバー上 HP/防御力バー -->
-<div id="hotbar-status" style="position:absolute;bottom:72px;left:50%;transform:translateX(-50%);display:none;z-index:98;background:rgba(0,0,0,0.6);padding:3px 10px;border-radius:4px;font-size:13px;color:#fff;text-shadow:1px 1px 0 #000;display:flex;gap:12px;align-items:center;white-space:nowrap">
-  <span>❤ <span id="hb-hp">20</span>/<span id="hb-hp-max">20</span></span>
-  <span>🛡 <span id="hb-armor">0</span></span>
-  <span>⚡ <span id="hb-level">1</span>Lv</span>
-</div>
-<button id="btn-view-toggle" style="position:absolute;top:10px;right:10px;font-family:'VT323',monospace;font-size:16px;padding:6px 12px;background:#444;color:#ffff55;border:2px solid #666;cursor:pointer;z-index:99;display:none">👁 1st</button>
-<div id="hotbar-wrap"></div>
-
-<!-- ===== SHOP / UPGRADE ===== -->
-<div id="win-shop" class="window">
-  <h2>🛒 ITEM SHOP</h2>
-  <div class="tabs" id="shop-tabs">
-    <div class="tab active" data-cat="Blocks">Blocks</div>
-    <div class="tab" data-cat="Weapons">Weapons</div>
-    <div class="tab" data-cat="Tools">Tools</div>
-    <div class="tab" data-cat="Special">Special</div>
-  </div>
-  <div class="shop-grid" id="shop-content"></div>
-  <button class="mc-btn btn-red" onclick="toggleMenu(null)" style="width:100%;margin-top:10px;font-size:22px">閉じる [E]</button>
-</div>
-
-<div id="win-upgrade" class="window">
-  <h2 style="color:#55FFFF">⬆ TEAM UPGRADES</h2>
-  <p style="margin:0 0 8px;color:#555;font-size:15px">ダイヤモンドでチーム強化</p>
-  <div class="shop-grid" id="upgrade-content"></div>
-  <button class="mc-btn btn-red" onclick="toggleMenu(null)" style="width:100%;margin-top:10px;font-size:22px">閉じる [E]</button>
-</div>
-
-<!-- ===== INVENTORY OVERLAY ===== -->
-<div id="win-inventory">
-  <div class="inv-title">📦 インベントリ [I]</div>
-  <div class="inv-top">
-    <div class="inv-armor-col" id="inv-armor-col"></div>
-    <div>
-      <div class="inv-skin-box" id="inv-skin-box">
-        <div class="inv-skin-stage">
-          <div class="inv-skin-model" id="inv-model">
-            <div class="box-3d head-3d"><div class="face hd-f"></div><div class="face hd-b"></div><div class="face hd-l"></div><div class="face hd-r"></div><div class="face hd-u"></div><div class="face hd-d"></div></div>
-            <div class="box-3d body-3d"><div class="face bd-f"></div><div class="face bd-b"></div><div class="face bd-l"></div><div class="face bd-r"></div><div class="face bd-u"></div><div class="face bd-d"></div></div>
-            <div class="box-3d r-arm-3d"><div class="face ra-f"></div><div class="face ra-b"></div><div class="face ra-l"></div><div class="face ra-r"></div><div class="face ra-u"></div><div class="face ra-d"></div></div>
-            <div class="box-3d l-arm-3d"><div class="face la-f"></div><div class="face la-b"></div><div class="face la-l"></div><div class="face la-r"></div><div class="face la-u"></div><div class="face la-d"></div></div>
-            <div class="box-3d r-leg-3d"><div class="face rl-f"></div><div class="face rl-b"></div><div class="face rl-l"></div><div class="face rl-r"></div><div class="face rl-u"></div><div class="face rl-d"></div></div>
-            <div class="box-3d l-leg-3d"><div class="face ll-f"></div><div class="face ll-b"></div><div class="face ll-l"></div><div class="face ll-r"></div><div class="face ll-u"></div><div class="face ll-d"></div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="inv-info">
-      チーム: <span id="inv-team">-</span><br>
-      HP: <span id="inv-hp">20</span>/20<br>
-      空腹: <span id="inv-hunger">20</span>/20<br>
-      床: <span id="inv-bed">✓</span>
-    </div>
-  </div>
-  <div style="font-size:13px;color:#555;margin-bottom:4px">メインインベントリ</div>
-  <div class="inv-grid" id="inv-main" style="margin-bottom:6px"></div>
-  <div style="font-size:13px;color:#555;margin-bottom:4px;border-top:2px solid #999;padding-top:6px">ホットバー</div>
-  <div class="inv-grid" id="inv-hotbar"></div>
-  <button class="mc-btn btn-red" onclick="toggleMenu(null)" style="width:100%;margin-top:10px;font-size:21px">閉じる [I]</button>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="js/supabase-config.js"></script>
-<script>
 'use strict';
-window.scene=window.scene||null;
-window.camera=window.camera||null;
-window.renderer=window.renderer||null;
-window.gameMode=window.gameMode??null;
-window.blockMap=window.blockMap||null;
-window.player=window.player||null;
-window.enemies=window.enemies||[];
-window.drops=window.drops||[];
-window.mpPlayers=window.mpPlayers||{};
-window.mpMeshes=window.mpMeshes||{};
-window.currentMatchId=window.currentMatchId||null;
-window.activeMenu=window.activeMenu||null;
-window.myPeerId=window.myPeerId||null;
-
-// 動的データは必ずHTMLへ挿入する前に無害化する。
-function bwEscapeHTML(value){
-  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-}
-function bwJsArg(value){ return bwEscapeHTML(JSON.stringify(String(value??''))); }
-function bwSafeColor(value,fallback='#ccc'){
-  const color=String(value||'');
-  return /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%]+\))$/i.test(color)?color:fallback;
-}
-// Vite/TypeScript側から旧ゲームへ移行するための型付きコマンド受信口。
-window.addEventListener('message',event=>{
-  if(event.source!==window.parent||event.data?.type!=='bedwars:command') return;
-  const command=event.data.command;
-  if(!command||typeof command.type!=='string') return;
-  try{
-    if(command.type==='set-mode'&&typeof startGame==='function') startGame(command.mode);
-    if(command.type==='load-map'&&typeof setMapTheme==='function') setMapTheme(String(command.mapId));
-    if(command.type==='move-player'&&window.player?.pos){
-      const p=command.position||{};
-      if(Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z)) window.player.pos.set(p.x,p.y,p.z);
-    }
-    if(command.type==='place-block'&&typeof addBlock==='function'){
-      const p=command.position||{};
-      if(Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z)&&typeof command.blockType==='string') addBlock(p.x,p.y,p.z,command.blockType,true);
-    }
-    if(command.type==='break-block'&&typeof blockMap!=='undefined'&&typeof removeBlock==='function'){
-      const p=command.position||{}; const list=blockMap.get(blockKey(p.x,p.y,p.z));
-      if(list?.[0]) removeBlock(list[0],false);
-    }
-  }catch(error){ console.warn('[BedWars command rejected]',error); }
-});
 // ================================================================
 //  BedWars Ultimate — Integrated Edition
 //  Backend: Supabase (Realtime + REST fallback via supabase-js)
 // ================================================================
 
 // ================================================================
-// v28: Gmail 6桁コードログイン
-// signInWithOtp はマジックリンクもOTPも同じAPI。メール本文にコードを出すかは
-// Supabaseダッシュボードのメールテンプレートで決まる。
-//
-// ダッシュボードで必ずやること:
-//   Authentication → Providers → Email をON
-//   Authentication → Email Templates で次の2つを両方書き換える
-//     - Magic Link
-//     - Confirm sign up   ← 初回ユーザーはこのテンプレが送られる
-//   本文から {{ .ConfirmationURL }} を削除し、{{ .Token }} だけ残す
-//   (Gmailのリンク検査がURLをクリックするとコードが先に無効化されるため)
-//
-// 推奨テンプレート例:
-//   件名: BedWars ログインコード {{ .Token }}
-//   本文:
-//     <h2>BedWars ログインコード</h2>
-//     <p>ゲーム画面にこの数字を入力してください。</p>
-//     <p style="font-size:28px;letter-spacing:6px;font-weight:bold">{{ .Token }}</p>
-//     <p>このコードは約1時間で期限切れです。リンクは使いません。</p>
-//
-// Googleログインは別系統。使う場合だけ Providers → Google を有効化する。
+// Supabase 接続設定
+// ※ ブラウザに置いてよいのは Project URL と publishable/anon key のみ。
+//    service_role key は絶対にここへ入れない。
 // ================================================================
-window._bwAuthUser=null;
-function _bwUpdateLoginUI(){
-  const statusEl=document.getElementById('bw-login-status');
-  const lobbyStatus=document.getElementById('bw-lobby-login-status');
-  const formEl=document.getElementById('bw-login-form');
-  const googleBtn=document.getElementById('bw-google-login-btn');
-  const logoutBtn=document.getElementById('bw-logout-btn');
-  const hint=window._bwAuthUser
-    ? ('🔐 ログイン中: '+(window._bwAuthUser.email||'(Google)'))
-    : '🔓 未ログイン(このブラウザだけの一時アカウント)';
-  const color=window._bwAuthUser?'#55ff55':'#888';
-  if(statusEl){ statusEl.textContent=hint; statusEl.style.color=color; }
-  if(lobbyStatus){ lobbyStatus.textContent=window._bwAuthUser?hint:'🔓 未ログイン'; lobbyStatus.style.color=color; }
-  const hintEl=document.getElementById('bw-login-hint');
-  const codeRow=document.getElementById('bw-login-code-row');
-  const emailInp=document.getElementById('bw-login-email');
-  if(window._bwAuthUser){
-    if(formEl) formEl.style.display='none';
-    if(googleBtn) googleBtn.style.display='none';
-    if(logoutBtn) logoutBtn.style.display='block';
-    if(hintEl) hintEl.style.display='none';
-    if(codeRow) codeRow.style.display='none';
-    if(emailInp) emailInp.value='';
-  } else {
-    if(formEl) formEl.style.display='flex';
-    if(googleBtn) googleBtn.style.display='block';
-    if(logoutBtn) logoutBtn.style.display='none';
-    if(hintEl) hintEl.style.display='block';
-  }
-}
-function openAdminPanel(){
-  document.getElementById('bw-admin-panel').style.display='block';
-  loadAdminPlayerList();
-}
-async function loadAdminPlayerList(){
-  const el=document.getElementById('bw-admin-player-list');
-  el.innerHTML='<div style="color:#888">読み込み中...</div>';
-  const res=await sbRequest({action:'adminListPlayers'});
-  if(!res||!res.ok){ el.innerHTML='<div style="color:#f55">取得失敗: '+(res?.error||'')+'</div>'; return; }
-  if(!res.players.length){ el.innerHTML='<div style="color:#888">プレイヤーがいません</div>'; return; }
-  // 同名プレイヤー(重複の疑いがあるもの)を視覚的にわかりやすくハイライトする
-  const nameCounts={};
-  res.players.forEach(p=>{ nameCounts[p.name]=(nameCounts[p.name]||0)+1; });
-  el.innerHTML=res.players.map(p=>{
-    const dup=nameCounts[p.name]>1;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #333;${dup?'background:rgba(255,80,80,0.1)':''}">
-      <div style="flex:1">
-        <span style="color:#fff;font-weight:bold">${bwEscapeHTML(p.name)}</span>
-        ${dup?'<span style="color:#ff5555;font-size:10px;margin-left:4px">⚠重複疑い</span>':''}
-        ${p.inLobby?'<span style="color:#55ff55;font-size:10px;margin-left:4px">●ロビー在室</span>':''}
-        <br><span style="color:#888;font-size:10px">uid:${p.uid} / Lv${p.level} / K${p.kills} W${p.wins}</span>
-      </div>
-      <input class="mc-input" id="bw-rename-${p.uid}" placeholder="新名前" style="width:90px;font-size:11px">
-      <button class="mc-btn" style="padding:4px 8px;font-size:11px" onclick="adminRenamePlayer(${bwJsArg(p.uid)})">改名</button>
-      <button class="mc-btn" style="padding:4px 10px;font-size:11px;background:#aa2222" onclick="adminDeletePlayer(${bwJsArg(p.uid)},${bwJsArg(p.name)})">削除</button>
-    </div>`;
-  }).join('');
-}
-async function adminRenamePlayer(uid){
-  const inp=document.getElementById('bw-rename-'+uid);
-  const newName=(inp?.value||'').trim().slice(0,16);
-  if(!newName){ alert('新しい名前を入力してください'); return; }
-  const res=await sbRequest({action:'adminRenamePlayer',targetUid:uid,newName});
-  if(res&&res.ok){ alert('名前を変更しました'); loadAdminPlayerList(); }
-  else alert('変更失敗: '+(res?.error||'不明なエラー'));
-}
-async function adminDeletePlayer(uid,name){
-  if(!confirm(`本当に「${name}」(uid:${uid})を削除しますか？\n(bw_players/bw_lobby/bw_history/bw_friendsの該当行が全て削除されます)`)) return;
-  const res=await sbRequest({action:'adminDeletePlayer',targetUid:uid});
-  if(res&&res.ok){ alert('削除しました'); loadAdminPlayerList(); }
-  else alert('削除失敗: '+(res?.error||'不明なエラー'));
+const SUPABASE_URL = window.__BW_CONFIG?.supabaseUrl || '';
+const SUPABASE_ANON_KEY = window.__BW_CONFIG?.supabaseAnonKey || '';
+window.SUPABASE_URL = SUPABASE_URL;
+window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
+
+if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
+  console.warn('Supabase設定がありません。オフラインモードで起動します。');
+} else if(!window.supabase){
+  console.error('Supabase JS が読み込まれていません。');
+} else {
+  window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
-window._bwOtpCooldownUntil=0;
-window._bwOtpLastEmail='';
-function _bwSetLoginHint(text,color){
-  const el=document.getElementById('bw-login-hint');
-  if(!el) return;
-  el.textContent=text;
-  el.style.color=color||'#888';
-}
-function _bwStartOtpCooldown(sec){
-  const btn=document.getElementById('bw-send-code-btn');
-  window._bwOtpCooldownUntil=Date.now()+sec*1000;
-  const tick=()=>{
-    const left=Math.ceil((window._bwOtpCooldownUntil-Date.now())/1000);
-    if(!btn) return;
-    if(left<=0){
-      btn.disabled=false;
-      btn.textContent='コード送信';
-      return;
-    }
-    btn.disabled=true;
-    btn.textContent=left+'秒後';
-    setTimeout(tick,250);
-  };
-  tick();
-}
-async function bwSendLoginLink(){
-  const emailEl=document.getElementById('bw-login-email');
-  const email=emailEl?.value?.trim();
-  if(!email||!email.includes('@')){ alert('メールアドレスを入力してください'); return; }
-  if(!window.supabaseClient){ alert('Supabaseが初期化されていません'); return; }
-  if(Date.now()<window._bwOtpCooldownUntil){
-    const left=Math.ceil((window._bwOtpCooldownUntil-Date.now())/1000);
-    alert('再送信は '+left+' 秒後です');
-    return;
-  }
-  // file:// では emailRedirectTo を渡すと「Email address is invalid」になる。
-  // 6桁コード方式ではリダイレクトURLは不要なので渡さない。
-  const {error}=await window.supabaseClient.auth.signInWithOtp({
-    email,
-    options:{
-      shouldCreateUser:true
-    }
-  });
-  if(error){
-    const msg=error.message||'';
-    if(/rate|60|security/i.test(msg)) _bwStartOtpCooldown(60);
-    alert('送信失敗: '+msg);
-    return;
-  }
-  window._bwOtpLastEmail=email;
-  const codeRow=document.getElementById('bw-login-code-row');
-  if(codeRow) codeRow.style.display='flex';
-  const codeEl=document.getElementById('bw-login-code');
-  if(codeEl){ codeEl.value=''; codeEl.focus(); }
-  _bwStartOtpCooldown(60);
-  _bwSetLoginHint(email+' に6桁コードを送りました。迷惑メールも確認してください。','#55ff55');
-}
-async function bwVerifyLoginCode(){
-  const emailEl=document.getElementById('bw-login-email');
-  const codeEl=document.getElementById('bw-login-code');
-  const email=(emailEl?.value?.trim())||window._bwOtpLastEmail;
-  const code=String(codeEl?.value||'').replace(/\s+/g,'');
-  if(!email||!code){ alert('メールアドレスと届いたコードの両方を入力してください'); return; }
-  if(!/^\d{6,8}$/.test(code)){ alert('コードはメール本文の数字6桁(環境により8桁)です'); return; }
-  if(!window.supabaseClient){ alert('Supabaseが初期化されていません'); return; }
-  // 既存ユーザーは email / magiclink、初回作成は signup テンプレが使われることがある。
-  let lastErr=null;
-  for(const type of ['email','magiclink','signup']){
-    const {data,error}=await window.supabaseClient.auth.verifyOtp({email,token:code,type});
-    if(!error){
-      alert('✅ ログインしました！');
-      const codeRow=document.getElementById('bw-login-code-row');
-      if(codeRow) codeRow.style.display='none';
-      _bwSetLoginHint('ログイン済み','#55ff55');
-      return data;
-    }
-    lastErr=error;
-    if(!/otp|token|type|expired|invalid/i.test(error.message||'')) break;
-  }
-  alert('認証失敗: '+(lastErr?.message||'不明なエラー')+'\nコードの期限切れ、またはメール本文に数字が無いテンプレート設定の可能性があります。');
-}
-async function bwLoginWithGoogle(){
-  if(!window.supabaseClient){ alert('Supabaseが初期化されていません'); return; }
-  const {error}=await window.supabaseClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.href}});
-  if(error) alert('Googleログイン失敗: '+error.message+'\n(Supabase側でGoogleプロバイダが有効になっているか確認してください)');
-}
-async function bwLogout(){
-  if(!window.supabaseClient) return;
-  await window.supabaseClient.auth.signOut();
-  window._bwAuthUser=null;
-  _bwUpdateLoginUI();
-  location.reload(); // ローカルの一時IDに戻すため再読み込み
+function _setSupabaseStatus(text,color){
+  const el=document.getElementById('supabase-connection-status');
+  if(el){el.textContent=text;el.style.color=color||'#888';}
 }
 if(window.supabaseClient){
-  window.supabaseClient.auth.onAuthStateChange((event,session)=>{
-    window._bwAuthUser=session?.user||null;
-    if(window._bwAuthUser){
-      // v26追記: ログイン済みならauth.uidを採用(全デバイス共通)。
-      // myPeerIdはこのスクリプト内で後ほどlet宣言されるため、
-      // ここでは代入のみ行い、実際の反映は後続の初期化コードに委ねる。
-      try{
-        localStorage.setItem('bw_peer_id', window._bwAuthUser.id);
-        if(typeof myPeerId!=='undefined') myPeerId=window._bwAuthUser.id;
-        if(typeof _bwApplyAuthProfile==='function') _bwApplyAuthProfile(window._bwAuthUser);
-      }catch(e){}
-    }
-    _bwUpdateLoginUI();
-    // v27追記: ログイン済みのメールアドレスが管理者一覧に登録されているか確認
-    if(window._bwAuthUser?.email){
-      sbRequest({action:'checkAdmin'}).then(res=>{
-        window._bwIsAdmin=!!(res&&res.ok&&res.isAdmin);
-        const btn=document.getElementById('bw-admin-btn');
-        if(btn) btn.style.display=window._bwIsAdmin?'block':'none';
-      });
-    } else {
-      window._bwIsAdmin=false;
-      const btn=document.getElementById('bw-admin-btn');
-      if(btn) btn.style.display='none';
-    }
-  });
+  _setSupabaseStatus('Supabase: 接続準備完了','#55ffff');
+}else{
+  _setSupabaseStatus('Supabase: オフライン','#888');
 }
 
 // ---- Persistent data ----
-let playerData = JSON.parse(localStorage.getItem('bw_data')||'null')||{level:1,kills:0,wins:0,seasonKills:0,seasonWins:0,name:'Player',skin:null};
-if(playerData.seasonKills==null) playerData.seasonKills=0;
-if(playerData.seasonWins==null) playerData.seasonWins=0;
-let playerName = localStorage.getItem('bw_name') || 'Player';
-let playerSkin = localStorage.getItem('bw_skin') || null;
+// Persistence is supplied by the React runtime; the fallback keeps the
+// extracted game engine usable during the migration.
+const bwStorage = window.__BW_STORAGE || {
+  get:(key,fallback=null)=>localStorage.getItem(key)??fallback,
+  set:(key,value)=>localStorage.setItem(key,String(value)),
+  remove:(key)=>localStorage.removeItem(key)
+};
+let playerData = _bwSafeJsonParse(bwStorage.get('bw_data'), {level:1,kills:0,wins:0,name:'Player',skin:null});
+if(!playerData || typeof playerData!=='object') playerData={level:1,kills:0,wins:0,name:'Player',skin:null};
+playerData.level=Math.max(1,Math.floor(Number(playerData.level)||1));
+playerData.kills=Math.max(0,Math.floor(Number(playerData.kills)||0));
+playerData.wins=Math.max(0,Math.floor(Number(playerData.wins)||0));
+playerData.name=String(playerData.name||'Player').slice(0,64);
+let playerName = String(bwStorage.get('bw_name') || 'Player').slice(0,16);
+let playerSkin = _bwSafeImageSource(bwStorage.get('bw_skin') || '') || null;
 document.getElementById('lobby-level').textContent = playerData.level;
 document.getElementById('lobby-kills').textContent  = playerData.kills;
 document.getElementById('lobby-wins').textContent   = playerData.wins;
-const _sk=document.getElementById('lobby-season-kills'); if(_sk) _sk.textContent=playerData.seasonKills||0;
-const _sw=document.getElementById('lobby-season-wins'); if(_sw) _sw.textContent=playerData.seasonWins||0;
 document.getElementById('player-name').value = playerName;
 setTimeout(()=>{ if(window.supabaseClient) sbRequest({action:'testPing'}); },0);
 
-window._bwControlScheme=localStorage.getItem('bw_control_scheme')||'kbm';
-window._bwDemoPlayer=sessionStorage.getItem('bw_demo_player')==='1';
-function _bwIsDemoName(n){
-  return /^Demo\d*$/i.test(String(n||'').trim());
+// ---- Safe rendering helpers ----
+// Supabase由来の名前・チャット・UIDはすべて外部入力として扱う。
+function _bwEscapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
 }
-function _bwRememberRealName(n){
-  n=String(n||'').trim();
-  if(!n || _bwIsDemoName(n)) return;
-  try{ sessionStorage.setItem('bw_real_name', n); }catch(e){}
+function _bwSafeColor(value, fallback='#ffffff'){
+  const s=String(value ?? '').trim();
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s) ? s : fallback;
 }
-function _bwRealPlayerName(){
+function _bwEncodeArg(value){
+  return encodeURIComponent(String(value ?? '')).replace(/'/g,'%27');
+}
+function _bwSafeImageSource(value){
+  const s=String(value ?? '').trim();
+  return /^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(s) ? s : '';
+}
+function _bwSafeCssUrl(value){
+  const s=String(value ?? '');
+  return s ? `"${s.replace(/["\\\n\r]/g,'\\$&')}"` : '""';
+}
+function _bwSafeJsonParse(raw, fallback){
+  if(raw == null || raw === '') return fallback;
   try{
-    const saved=sessionStorage.getItem('bw_real_name');
-    if(saved && !_bwIsDemoName(saved)) return saved.slice(0,16);
-  }catch(e){}
-  const meta=window._bwAuthUser?.user_metadata||{};
-  const gName=(meta.full_name||meta.name||'').toString().trim();
-  if(gName) return gName.slice(0,16);
-  const stored=localStorage.getItem('bw_name');
-  if(stored && !_bwIsDemoName(stored)) return stored.slice(0,16);
-  return 'Player';
-}
-function _bwApplyPlayerName(n, persist){
-  n=String(n||'Player').trim().slice(0,16)||'Player';
-  const nameInput=document.getElementById('player-name');
-  if(nameInput) nameInput.value=n;
-  try{ playerName=n; }catch(e){}
-  try{ if(typeof player!=='undefined' && player) player.name=n; }catch(e){}
-  if(persist && !_bwIsDemoName(n) && !window._bwDemoPlayer){
-    localStorage.setItem('bw_name', n);
-  }
-  const hud=document.getElementById('hud-player-name');
-  if(hud) hud.textContent=n;
-}
-function _bwRefreshProfileChip(){
-  const chip=document.getElementById('bw-profile-chip');
-  if(chip){
-    const inGame=typeof gameMode!=='undefined' && gameMode && gameMode!=='lobby';
-    chip.classList.toggle('ingame', !!inGame);
-    chip.style.display=inGame?'none':'flex';
-  }
-  const nameEl=document.getElementById('bw-profile-name');
-  const statsEl=document.getElementById('bw-profile-stats');
-  const accEl=document.getElementById('bw-profile-account');
-  const faceEl=document.getElementById('bw-profile-face');
-  const name=document.getElementById('player-name')?.value||playerName||'Player';
-  if(nameEl) nameEl.textContent=(window._bwDemoPlayer?'[DEMO] ':'')+name;
-  if(statsEl) statsEl.textContent=`Lv.${playerData.level||1}  Kill ${playerData.kills||0}  Win ${playerData.wins||0}`;
-  const u=window._bwAuthUser;
-  const meta=u?.user_metadata||{};
-  if(accEl) accEl.textContent=u?(meta.full_name||meta.name||u.email||'ログイン中'):'未ログイン';
-  const avatar=meta.avatar_url||meta.picture||'';
-  if(faceEl){
-    if(avatar){ faceEl.src=avatar; faceEl.style.display='block'; }
-    else {
-      const skin=localStorage.getItem('bw_skin');
-      if(skin) faceEl.src=skin;
-      else faceEl.removeAttribute('src');
-    }
+    const parsed=JSON.parse(raw);
+    return parsed == null ? fallback : parsed;
+  }catch(e){
+    console.warn('保存データのJSON解析に失敗したため既定値を使用します', e);
+    return fallback;
   }
 }
-function _bwApplyAuthProfile(user){
-  if(!user){ _bwRefreshProfileChip(); return; }
-  const meta=user.user_metadata||{};
-  const gName=(meta.full_name||meta.name||'').toString().slice(0,16);
-  const nameInput=document.getElementById('player-name');
-  const cur=nameInput?.value||'';
-  if(nameInput && gName && (!cur || cur==='Player1' || cur==='Player' || _bwIsDemoName(cur)) && !window._bwDemoPlayer){
-    nameInput.value=gName;
-    playerName=gName;
-    localStorage.setItem('bw_name',gName);
-  }
-  if(gName && !window._bwDemoPlayer) _bwRememberRealName(gName);
-  _bwRefreshProfileChip();
-}
-window._bwSetControlScheme=function(v){
-  window._bwControlScheme=(v==='touch')?'touch':'kbm';
-  localStorage.setItem('bw_control_scheme',window._bwControlScheme);
-  const ui=document.getElementById('bw-touch-ui');
-  if(ui) ui.style.display=window._bwControlScheme==='touch'?'block':'none';
-  if(window._bwControlScheme==='touch') try{document.exitPointerLock();}catch(e){}
-};
-window._bwSetDemoPlayer=function(on){
-  const nameInput=document.getElementById('player-name');
-  const current=nameInput?.value||playerName||'';
-  if(on){
-    _bwRememberRealName(current);
-    window._bwDemoPlayer=true;
-    sessionStorage.setItem('bw_demo_player','1');
-    let id=sessionStorage.getItem('bw_demo_uid');
-    if(!id){ id='demo_'+Math.random().toString(36).slice(2,10); sessionStorage.setItem('bw_demo_uid',id); }
-    try{ myPeerId=id; window.myPeerId=id; }catch(e){}
-    const demoName=_bwIsDemoName(current)?current:('Demo'+Math.floor(10+Math.random()*90));
-    _bwApplyPlayerName(demoName, false);
-  } else {
-    window._bwDemoPlayer=false;
-    sessionStorage.setItem('bw_demo_player','0');
-    try{ sessionStorage.removeItem('bw_demo_uid'); }catch(e){}
-    try{
-      const authId=window._bwAuthUser?.id||localStorage.getItem('bw_peer_id');
-      if(authId){ myPeerId=authId; window.myPeerId=authId; }
-    }catch(e){}
-    _bwApplyPlayerName(_bwRealPlayerName(), true);
-  }
-  const demoChk=document.getElementById('set-demoPlayer');
-  if(demoChk) demoChk.checked=!!window._bwDemoPlayer;
-  _bwRefreshProfileChip();
-};
-if(window._bwDemoPlayer){
-  const cur=document.getElementById('player-name')?.value||playerName||'';
-  if(!_bwIsDemoName(cur)) _bwRememberRealName(cur);
-} else if(_bwIsDemoName(playerName) || _bwIsDemoName(document.getElementById('player-name')?.value)){
-  _bwApplyPlayerName(_bwRealPlayerName(), true);
-}
-_bwRefreshProfileChip();
-document.getElementById('player-name')?.addEventListener('input',()=>{
-  const v=document.getElementById('player-name')?.value||'';
-  if(!window._bwDemoPlayer && !_bwIsDemoName(v)) _bwRememberRealName(v);
-  _bwRefreshProfileChip();
-});
 
 // ---- Team config ----
 const TEAM_COLOR    = {Red:0xe05050, Blue:0x5555ee, Green:0x22aa22, Yellow:0xddaa00};
@@ -1562,40 +474,65 @@ const TEX=(()=>{
 // ================================================================
 //  GAME STATE
 // ================================================================
-var scene=null, camera=null, renderer=null, clock=new THREE.Clock();
-var gameMode=null, teamMode=2;
-window.scene=null; window.camera=null; window.renderer=null; window.gameMode=null;
-// v26修正: 複数タブでの重複プレイヤー対策。
-// 以前はページを開くたびにMath.random()で新しいIDを発行しており、
-// 同じブラウザで複数タブを開いてテストすると、DB上は「別人」として
-// 複数行が残ってしまっていた(15〜30秒のTTLで自動的に消えるとはいえ、
-// その間は重複して表示される)。同じブラウザなら常に同じIDを使うよう
-// localStorageに永続化し、複数タブは「同じプレイヤー」として扱われるように
-// する(再訪時も同じ実績・フレンドが引き継がれる副次効果もある)。
-let myPeerId=(function(){
-  try{
-    let id=localStorage.getItem('bw_peer_id');
-    if(!id){ id='pid_'+Math.random().toString(36).substr(2,9); localStorage.setItem('bw_peer_id',id); }
-    return id;
-  }catch(e){ return 'pid_'+Math.random().toString(36).substr(2,9); }
-})();
-if(sessionStorage.getItem('bw_demo_player')==='1'){
-  window._bwDemoPlayer=true;
-  let did=sessionStorage.getItem('bw_demo_uid');
-  if(!did){ did='demo_'+Math.random().toString(36).slice(2,10); sessionStorage.setItem('bw_demo_uid',did); }
-  myPeerId=did;
+let scene, camera, renderer;
+const clock={
+  _last:0,
+  getDelta(){
+    const now=performance.now();
+    if(!this._last){ this._last=now; return 0; }
+    const delta=(now-this._last)/1000;
+    this._last=now;
+    return Math.min(delta,0.05);
+  }
+};
+let gameMode=null, teamMode=2;
+function _bwGetStablePeerId(){
+  const key='bw_uid';
+  let id=bwStorage.get(key);
+  if(typeof id!=='string' || !/^[A-Za-z0-9_-]{8,128}$/.test(id)){
+    const rnd=(typeof crypto!=='undefined' && typeof crypto.randomUUID==='function')
+      ? crypto.randomUUID().replace(/-/g,'')
+      : Math.random().toString(36).slice(2)+Date.now().toString(36);
+    id='pid_'+rnd.slice(0,40);
+    bwStorage.set(key,id);
+  }
+  return id;
+}
+let myPeerId=_bwGetStablePeerId();
+window.__BW_LOCAL_PEER_ID=myPeerId;
+if(window.supabaseClient?.auth){
+  window.__BW_AUTH_READY=(async()=>{
+    try{
+      const {data:{session}}=await window.supabaseClient.auth.getSession();
+      let user=session?.user;
+      if(!user){
+        const {data,error}=await window.supabaseClient.auth.signInAnonymously();
+        if(error) throw error;
+        user=data.user;
+      }
+      if(user?.id){
+        myPeerId=user.id;
+        bwStorage.set('bw_uid',myPeerId);
+        _setSupabaseStatus('Supabase: 匿名認証OK','#55ffff');
+      }
+    }catch(e){
+      console.warn('Supabase匿名認証に失敗したためローカルIDを使用します', e);
+      _setSupabaseStatus('Supabase: 認証なし（ローカルID）','#ffaa00');
+    }
+    return myPeerId;
+  })();
+}else{
+  window.__BW_AUTH_READY=Promise.resolve(myPeerId);
 }
 let isHost=false, mpSyncInterval=null;
+window._bwMultiplayerIntervals=[];
 let mpPlayers={}, mpMeshes={};
 let shakeIntensity=0, activeMenu=null;
 let thirdPerson=false, playerMesh3p=null;
-window.playerMesh3p=null;
 let breaks=0, lastPlaceTime=0, gameTime=0;
 const TEAM_BED_STATUS={Red:true,Blue:true,Green:true,Yellow:true};
 let skinUrl=null;
 let floatingTexts=[], particles=[], drops=[], enemies=[], npcs=[];
-window.enemies=enemies; window.drops=drops; window.mpPlayers=mpPlayers; window.mpMeshes=mpMeshes;
-window.activeMenu=activeMenu; window.myPeerId=myPeerId;
 let keys={}, controls={yaw:0,pitch:0};
 let lastWTime=0; // for sprint double-tap
 
@@ -1613,7 +550,7 @@ const player={
   onGround:false, jumpWasUp:true,
   upgrades:{sharpness:0,protection:0,haste:0,healpool:false,trap:false}
 };
-window.player=player;
+
 // Physics constants — Minecraft tuned
 const GRAVITY=-30;   // blocks/s²  (gives ~1.25 block jump with JUMP_VEL)
 const JUMP_VEL=8.8;  // blocks/s
@@ -1621,8 +558,7 @@ const WALK=4.4, SPRINT=5.8, CROUCH=1.8;
 
 // Spatial hash
  const CELL=1;
- var blockMap=new Map();
- window.blockMap=blockMap;
+ let blockMap=new Map();
  function blockKey(x,y,z){return Math.round(x)+','+Math.round(y)+','+Math.round(z);}
  function regBlock(b){const k=blockKey(b.position.x,b.position.y,b.position.z);if(!blockMap.has(k))blockMap.set(k,[]);blockMap.get(k).push(b);}
  function unregBlock(b){const k=blockKey(b.position.x,b.position.y,b.position.z);const a=blockMap.get(k);if(a){const i=a.indexOf(b);if(i!==-1)a.splice(i,1);}}
@@ -2332,29 +1268,25 @@ function spawnSpawner(x,y,z,type){
   scene.add(m);npcs.push(m);
 }
 
-// 本家Dreamスキンをボットのデフォルトスキンに使用
-const DREAM_SKIN_URL='https://minecraft.how/skin/151515/hd/4.png';
+// 外部URLに依存せず、ローカル生成スキンをボットのデフォルトに使用
 let _dreamSkinImage=null;
 function _loadDreamSkin(cb){
   if(_dreamSkinImage){cb&&cb();return;}
+  const fallback=_getFallbackSkinImage();
   const img=new Image();
-  img.crossOrigin='anonymous';
   img.onload=()=>{ _dreamSkinImage=img; cb&&cb(); };
-  img.onerror=()=>{cb&&cb();};
-  img.src=DREAM_SKIN_URL;
+  img.onerror=()=>{ _dreamSkinImage=fallback; cb&&cb(); };
+  img.src=fallback.toDataURL('image/png');
 }
 
 function spawnAI(x,y,z,teamName){
   const col=TEAM_COLOR[teamName]||0xff2222;
   // プレイヤーと同一のリグ(頭/胴/腕/脚)を使用。まずはフォールバック外見で即座に生成
-  window._bwMeshFacing='ai';
   const g=createSimplePlayerMesh(col);
-  window._bwMeshFacing='player';
-  g.userData._aiFace=true;
   g.position.set(x,y,z);
   // userDataを上書きせずマージ（createSimplePlayerMeshが設定したrArm/lArm等を保持）
-  Object.assign(g.userData,{isEnemy:true,team:teamName,hp:14,maxHp:14,damage:2,vel:new THREE.Vector3(),onGround:false,atkTimer:0,walkPhase:0,state:'idle'});
-  scene.add(g);enemies.push(g);
+  Object.assign(g.userData,{isEnemy:true,team:teamName,hp:20,maxHp:20,vel:new THREE.Vector3(),onGround:false,atkTimer:0,walkPhase:0,state:'idle'});
+  scene.add(g); if(window._bwApplyMeshShadows) window._bwApplyMeshShadows(g); enemies.push(g);
   addLabel(`🤖 AI [${teamName}]`,x,y+2.4,z,TEAM_COLOR_HEX[teamName]||'#ff5555');
 
   // Dreamスキンを読込後、メッシュ全体を正しいUVで再構築して差し替え
@@ -2364,10 +1296,7 @@ function spawnAI(x,y,z,teamName){
     const pos=g.position.clone();
     const ud=g.userData;
     parent.remove(g);
-    window._bwMeshFacing='ai';
     const newMesh=createSimplePlayerMesh(col, _dreamSkinImage);
-    window._bwMeshFacing='player';
-    newMesh.userData._aiFace=true;
     newMesh.position.copy(pos);
     Object.assign(newMesh.userData, ud); // hp等のゲーム状態を引き継ぐ
     parent.add(newMesh);
@@ -2412,8 +1341,8 @@ function addLabel(text,x,y,z,color='#fff'){
 // ================================================================
 function initScene(){
   scene=new THREE.Scene();
-  scene.background=new THREE.Color(0x87b7e6);
-  scene.fog=new THREE.FogExp2(0xb7cfe0,.0042);
+  scene.background=new THREE.Color(0x87CEEB);
+  scene.fog=new THREE.FogExp2(0x87CEEB,.008);
 
   camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,400);
 
@@ -2421,9 +1350,7 @@ function initScene(){
   renderer.setSize(innerWidth,innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.shadowMap.enabled=true;
-  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  if(renderer.outputEncoding!==undefined) renderer.outputEncoding=THREE.sRGBEncoding;
-  if(renderer.toneMapping!==undefined){ renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12; }
+  renderer.shadowMap.type=THREE.PCFShadowMap;
   document.body.appendChild(renderer.domElement);
   renderer.domElement.style.position='absolute';
   renderer.domElement.style.top='0';
@@ -2435,20 +1362,14 @@ function initScene(){
   window.scene=scene;
   window.camera=camera;
   window.renderer=renderer;
-  window.gameMode=gameMode;
-  window.blockMap=blockMap;
-  window.player=player;
-  window.enemies=enemies;
 
-  scene.add(new THREE.AmbientLight(0xc8d8ee,.22));
-  const hemi=new THREE.HemisphereLight(0x9ec8ff,0x3d4a32,0.72);
+  scene.add(new THREE.AmbientLight(0xffffff,.42));
+  // v26追記: 半球ライト(空色/地面色)を追加。影MOD相当の質感にするため、
+  // 影で暗くなる部分にも空色/草色の環境光がほんのり回り込むようにする。
+  const hemi=new THREE.HemisphereLight(0xbfe0ff,0x5a7a3a,0.35);
   scene.add(hemi);
-  const fill=new THREE.DirectionalLight(0x7ea4d8,.28);
-  fill.position.set(-50,18,-30); scene.add(fill);
-  const bounce=new THREE.DirectionalLight(0xb7c49a,.12);
-  bounce.position.set(10,-20,8); scene.add(bounce);
-  const sun=new THREE.DirectionalLight(0xfff1d2,1.35);
-  sun.position.set(48,72,26);scene.add(sun);
+  const sun=new THREE.DirectionalLight(0xfff6da,.85);
+  sun.position.set(50,120,30);scene.add(sun);
 
   // v26追記: 影(シャドウマップ)を実際に機能させるための設定。
   // 以前はrenderer.shadowMap.enabledをtrueにするだけで、太陽光側に
@@ -2456,24 +1377,24 @@ function initScene(){
   // 本家Minecraft寄りの「輪郭のはっきりした」見た目にするため、
   // PCFSoftShadowMapは使いつつradius/bias等はシャープめに調整する。
   sun.castShadow=true;
-  sun.shadow.mapSize.set(3072,3072);
-  const SHADOW_RANGE=56;
+  sun.shadow.mapSize.set(2048,2048);
+  const SHADOW_RANGE=48; // プレイヤー周辺のみをカバー(広すぎるとボケて解像度不足になる)
   sun.shadow.camera.left=-SHADOW_RANGE;
   sun.shadow.camera.right=SHADOW_RANGE;
   sun.shadow.camera.top=SHADOW_RANGE;
   sun.shadow.camera.bottom=-SHADOW_RANGE;
   sun.shadow.camera.near=1;
   sun.shadow.camera.far=260;
-  sun.shadow.bias=-0.00045;
-  sun.shadow.normalBias=0.022;
-  sun.shadow.radius=3.4;
+  sun.shadow.bias=-0.0009;
+  sun.shadow.normalBias=0.035;
+  sun.shadow.radius=2.5; // v26追記: 影の輪郭を軽くぼかし、硬すぎる/ジャギーな見た目を緩和
   sun.target.position.set(0,0,0);
   scene.add(sun.target);
   window._bwSunLight=sun;
   // 太陽の影を常にプレイヤー中心に追従させる(範囲を絞っているため必要)
   window._bwUpdateSunShadowTarget=function(px,pz){
     if(!window._bwSunLight) return;
-    window._bwSunLight.position.set(px+48,72,pz+26);
+    window._bwSunLight.position.set(px+50,120,pz+30);
     window._bwSunLight.target.position.set(px,0,pz);
     window._bwSunLight.target.updateMatrixWorld();
   };
@@ -2482,7 +1403,6 @@ function initScene(){
   playerMesh3p=createSimplePlayerMesh(TEAM_COLOR[player.team]||0x5555ee);
   playerMesh3p.visible=false;
   scene.add(playerMesh3p);
-  window.playerMesh3p=playerMesh3p;
 
   _withMapSeed(currentMatchId ? currentMapSeed : 0, createWorld);
   setupInput();
@@ -2522,14 +1442,28 @@ function initScene(){
 let _skinCanvas=null; // グローバルスキンキャンバス
 
 function loadSkinFromDataURL(dataURL, cb){
+  const safe=_bwSafeImageSource(dataURL);
+  if(!safe){cb&&cb();return;}
   const img=new Image();
   img.crossOrigin='anonymous';
   img.onload=()=>{
-    _skinImage=img;
-    if(cb) cb();
+    try{
+      // Minecraft-like skin UVs in the renderer are 64x64. If the supplied
+      // PNG has another size, resample it once (nearest-neighbour) and use
+      // the normalized image for every 3D skin view.
+      const c=document.createElement('canvas'); c.width=64; c.height=64;
+      const ctx=c.getContext('2d');
+      ctx.imageSmoothingEnabled=false;
+      ctx.clearRect(0,0,64,64);
+      ctx.drawImage(img,0,0,64,64);
+      const normalized=new Image();
+      normalized.onload=()=>{ _skinImage=normalized; if(cb)cb(); };
+      normalized.onerror=()=>{ _skinImage=img; if(cb)cb(); };
+      normalized.src=c.toDataURL('image/png');
+    }catch(e){ _skinImage=img; if(cb)cb(); }
   };
-  img.onerror=()=>{ if(cb) cb(); };
-  img.src=dataURL;
+  img.onerror=()=>{ if(cb)cb(); };
+  img.src=safe;
 }
 
 // ================================================================
@@ -2561,11 +1495,6 @@ function _createSkinBodyPart(img, x, y, w, h, d, layerX, layerY, pivotY, outerLa
   // skin_view.html の createBodyPart を完全忠実移植（ピクセル単位のまま、スケールはルートで一括適用）
   const group=new THREE.Group();
   const getMaterials=(ox, oy, isOverlay)=>{
-    // v26.2修正: 前回「180度回転で左右が鏡写しになる」と判断してUVを
-    // 入れ替えたが誤りだった。180度のY回転は剛体の"回転"であり"鏡映(反転)"
-    // ではないため、ローカル座標系内でのUVとジオメトリ面の対応は崩れず、
-    // 入れ替える必要は無かった。ユーザー提供の参照実装 skin_view.html の
-    // createBodyPart と完全に同じUV順序に戻す。
     const uvData=[
       [ox, oy+d, d, h],
       [ox+d+w, oy+d, d, h],
@@ -2574,33 +1503,14 @@ function _createSkinBodyPart(img, x, y, w, h, d, layerX, layerY, pivotY, outerLa
       [ox+d, oy+d, w, h],
       [ox+d+w+d, oy+d, w, h]
     ];
-    // v26追記: 実験的スキン描画精度(低/中/高)
-    //   低: キャンバス解像度を半分に縮小して負荷軽減(見た目はドット感が少し強くなる)
-    //   中: 従来通り(等倍・ドット感を維持するNearestFilter)
-    //   高: 等倍のままLinearFilter+ミップマップでなめらかな(＝より"リアルな")見た目に
-    const realism = window._bwSkinRealism || 'mid';
-    const resScale = realism==='low' ? 0.5 : 1;
     return uvData.map(uv=>{
       const canvas=document.createElement('canvas');
-      canvas.width=Math.max(1,Math.round(uv[2]*resScale));
-      canvas.height=Math.max(1,Math.round(uv[3]*resScale));
+      canvas.width=Math.max(1,uv[2]); canvas.height=Math.max(1,uv[3]);
       const ctx=canvas.getContext('2d');
-      ctx.imageSmoothingEnabled = (realism==='high');
-      try{ ctx.drawImage(img, uv[0], uv[1], uv[2], uv[3], 0, 0, canvas.width, canvas.height); }catch(e){}
+      ctx.imageSmoothingEnabled=false;
+      try{ ctx.drawImage(img, uv[0], uv[1], uv[2], uv[3], 0, 0, uv[2], uv[3]); }catch(e){}
       const tex=new THREE.CanvasTexture(canvas);
-      if(realism==='high'){
-        tex.magFilter=THREE.LinearFilter;
-        tex.minFilter=THREE.LinearMipmapLinearFilter;
-        tex.generateMipmaps=true;
-        // v26追記: 斜めから見た際のぼやけを軽減(GPUがサポートする範囲で最大値を使用)
-        if(typeof renderer!=='undefined' && renderer?.capabilities?.getMaxAnisotropy){
-          tex.anisotropy=renderer.capabilities.getMaxAnisotropy();
-        }
-      } else {
-        tex.magFilter=THREE.NearestFilter;
-        tex.minFilter=THREE.NearestFilter;
-        tex.generateMipmaps=false;
-      }
+      tex.magFilter=THREE.NearestFilter; tex.minFilter=THREE.NearestFilter;
       return new THREE.MeshLambertMaterial({
         map:tex, transparent:isOverlay, alphaTest:isOverlay?0.1:0,
         side:isOverlay?THREE.DoubleSide:THREE.FrontSide
@@ -2678,11 +1588,9 @@ function createSimplePlayerMesh(color, imgOverride){
   }
 
   modelGroup.scale.set(SK,SK,SK); // ピクセル座標系(32px=2.0)→ブロック座標系
-  // v26追記: 本家Minecraft同様、プレイヤー/AIモデル自身が地面に影を落とすようにする
-  modelGroup.traverse(o=>{ if(o.isMesh){ o.castShadow=true; o.receiveShadow=false; } });
   // ★向き補正: skin_view.htmlは+Z=前面規約だが本ゲームは-Z=前進方向のため180°反転して合わせる。
   //   外側rootの回転(controls.yaw等)で毎フレーム上書きされないよう、内側のmodelGroupに固定で焼き込む。
-  modelGroup.rotation.y=window._bwMeshFacing==='ai'?0:Math.PI;
+  modelGroup.rotation.y=Math.PI;
 
   const root=new THREE.Group();
   root.add(modelGroup);
@@ -2694,16 +1602,6 @@ function createSimplePlayerMesh(color, imgOverride){
   return root;
 }
 
-function _bwApplyHeadLook(mesh, yaw, pitch){
-  if(!mesh) return;
-  if(Number.isFinite(yaw)) mesh.rotation.y=yaw;
-  const head=mesh.getObjectByName('head');
-  if(!head) return;
-  const p=Number.isFinite(pitch)?pitch:0;
-  head.rotation.x=Math.max(-1.15,Math.min(1.15,-p));
-  head.rotation.y=0;
-  head.rotation.z=0;
-}
 function refreshPlayerMeshSkin(){
   if(!playerMesh3p || !playerMesh3p.parent) return;
   const parent=playerMesh3p.parent;
@@ -2715,7 +1613,6 @@ function refreshPlayerMeshSkin(){
   playerMesh3p.position.copy(oldPos);
   playerMesh3p.visible=oldVisible;
   parent.add(playerMesh3p);
-  window.playerMesh3p=playerMesh3p;
 }
 
 function toggleSkinOverlayLayer(visible){
@@ -2730,54 +1627,8 @@ function toggleSkinOverlayLayer(visible){
 // ================================================================
 //  INPUT
 // ================================================================
-// v26追記: ポインターロックの範囲限定。
-// 以前は6箇所で個別にdocument.body.requestPointerLock()を呼んでおり、
-// それぞれ条件チェックがバラバラだったため、ポーズ画面や設定画面、
-// 終了画面が表示されている間にもポインターがロックされてしまうことがあった。
-// 実際のゲームプレイ中(ロビーでも各種メニュー表示中でも死亡中でもない)
-// かどうかを一箇所で判定するゲート関数に統一する。
-function _bwOverlayOpen(){
-  const ids=['pause-menu','ingame-menu','settings-panel','end-screen','bw-admin-panel'];
-  for(const id of ids){
-    const el=document.getElementById(id);
-    if(!el) continue;
-    const d=el.style.display||getComputedStyle(el).display;
-    if(d && d!=='none') return true;
-  }
-  if(document.getElementById('friend-panel')) return true;
-  const chatBox=document.getElementById('chat-input-box');
-  if(chatBox && chatBox.style.display && chatBox.style.display!=='none') return true;
-  return false;
-}
-function _bwIsTypingTarget(el){
-  if(!el) return false;
-  const tag=(el.tagName||'').toLowerCase();
-  if(tag==='input'||tag==='textarea'||tag==='select'||el.isContentEditable) return true;
-  if(document.getElementById('settings-panel')?.style.display==='block') return true;
-  if(document.getElementById('friend-panel')) return true;
-  if(document.getElementById('bw-yt-panel')?.style.display==='block') return true;
-  if(document.getElementById('end-screen')?.style.display==='block') return true;
-  const lobby=document.getElementById('lobby');
-  if(lobby && lobby.style.display!=='none' && (gameMode==='lobby'||!gameMode)) return true;
-  return false;
-}
-function _bwCanLockPointer(){
-  if(typeof gameMode==='undefined'||gameMode==='lobby'||!gameMode) return false;
-  if(window._bwControlScheme==='touch') return false;
-  if(typeof activeMenu!=='undefined' && activeMenu) return false;
-  if(_bwOverlayOpen()) return false;
-  if(typeof player!=='undefined' && player && player.isDead && !player.spectatorMode) return false;
-  return true;
-}
-function _bwRequestPointerLock(){
-  if(!_bwCanLockPointer()) return;
-  try{ document.body.requestPointerLock(); }catch(e){}
-}
-
 function setupInput(){
   document.addEventListener('keydown',e=>{
-    const typing=_bwIsTypingTarget(e.target);
-    if(typing) return;
     const wasDown=keys[e.code];
     keys[e.code]=true;
 
@@ -2811,19 +1662,7 @@ function setupInput(){
     if(e.code==='KeyF')useItem();
     if(e.code==='KeyQ'){e.preventDefault();toggleThirdPerson();}
     if(e.code==='ArrowDown'){e.preventDefault();dropItem();}
-    if(e.code.startsWith('Digit')){
-      const n=parseInt(e.code.slice(-1))-1;
-      if(_emoteMenuOpen && n>=0 && n<EMOTES.length){
-        e.preventDefault();
-        playEmote(EMOTES[n].key, EMOTES[n].emoji);
-        const em=document.getElementById('emote-menu');
-        if(em) em.remove();
-        _emoteMenuOpen=false;
-        _captureCursor();
-        return;
-      }
-      if(n>=0&&n<9)switchSlot(n);
-    }
+    if(e.code.startsWith('Digit')){const n=parseInt(e.code.slice(-1))-1;if(n>=0&&n<9)switchSlot(n);}
     // v26追記: ESC優先順位を一本化(チャット→インベントリ/ショップ→ポーズ/インゲームメニュー)。
     // 以前は別の場所(captureフェーズ)にも「メニューを閉じる」ESCリスナーがあり、
     // 同じキー入力で「閉じる」と「開く」が二重発火することがあった。
@@ -2870,16 +1709,9 @@ function setupInput(){
     if(e.code==='Tab')document.getElementById('scoreboard').style.display='none';
   });
   document.addEventListener('wheel',e=>{
-    if(e.altKey){
-      e.preventDefault();
-      window._bwAltZoom=Math.max(0,Math.min(1,(window._bwAltZoom||0)+(e.deltaY>0?-0.08:0.08)));
-      return;
-    }
-    if(currentSettings.scrollSlot===false) return;
     player.selectedIdx=(player.selectedIdx+(e.deltaY>0?1:-1)+9)%9;updateUI();
-  },{passive:false});
+  });
   document.addEventListener('mousemove',e=>{
-    if(document.pointerLockElement&&!activeMenu){
     if(document.pointerLockElement&&!activeMenu){
       const sens=(currentSettings.sens||0.15)*0.011;
       const invertY=currentSettings.invertY?-1:1;
@@ -2887,10 +1719,9 @@ function setupInput(){
       controls.pitch=Math.max(-Math.PI/2+0.001,Math.min(Math.PI/2-0.001,
         controls.pitch-e.movementY*sens*invertY));
     }
-    }
   });
   document.addEventListener('mousedown',e=>{
-    if(!document.pointerLockElement&&!activeMenu){_bwRequestPointerLock();return;}
+    if(!document.pointerLockElement&&!activeMenu){document.body.requestPointerLock();return;}
     if(activeMenu)return;
     if(player.spectatorMode||player.isDead)return; // スペクテイター中は一切の攻撃/採掘/設置を禁止
     if(e.button===0){
@@ -2929,100 +1760,10 @@ function setupInput(){
   });
   // pointer lock request on click when no menu
   document.body.addEventListener('click',()=>{
-    if(!document.pointerLockElement) _bwRequestPointerLock();
+    if(!activeMenu&&!document.getElementById('lobby').style.display?.includes('none')===false
+      &&document.getElementById('lobby').style.display==='none'
+      &&!document.pointerLockElement) document.body.requestPointerLock();
   });
-  _bwInitTouchControls();
-}
-function _bwInitTouchControls(){
-  window._bwSetControlScheme(window._bwControlScheme||'kbm');
-  const joy=document.getElementById('bw-touch-joy');
-  const knob=document.getElementById('bw-touch-knob');
-  const look=document.getElementById('bw-touch-look');
-  if(!joy||!look) return;
-  const setMove=(x,y)=>{
-    keys.KeyW=y<-0.3; keys.KeyS=y>0.3; keys.KeyA=x<-0.3; keys.KeyD=x>0.3;
-    if(knob){ knob.style.left=(45+x*36)+'px'; knob.style.top=(45+y*36)+'px'; }
-  };
-  const readStick=(ev,el)=>{
-    const t=ev.touches?ev.touches[0]:ev;
-    const r=el.getBoundingClientRect();
-    const x=((t.clientX-(r.left+r.width/2))/(r.width/2));
-    const y=((t.clientY-(r.top+r.height/2))/(r.height/2));
-    return {x:Math.max(-1,Math.min(1,x)),y:Math.max(-1,Math.min(1,y))};
-  };
-  let joyOn=false;
-  joy.addEventListener('touchstart',e=>{e.preventDefault();joyOn=true;const p=readStick(e,joy);setMove(p.x,p.y);},{passive:false});
-  joy.addEventListener('touchmove',e=>{if(!joyOn)return;e.preventDefault();const p=readStick(e,joy);setMove(p.x,p.y);},{passive:false});
-  joy.addEventListener('touchend',()=>{joyOn=false;setMove(0,0);});
-  let lookLast=null;
-  look.addEventListener('touchstart',e=>{const t=e.touches[0];lookLast={x:t.clientX,y:t.clientY};},{passive:true});
-  look.addEventListener('touchmove',e=>{
-    if(!lookLast||window._bwControlScheme!=='touch')return;
-    const t=e.touches[0];
-    const dx=t.clientX-lookLast.x, dy=t.clientY-lookLast.y;
-    lookLast={x:t.clientX,y:t.clientY};
-    const sens=(currentSettings.sens||0.15)*0.012;
-    const invertY=currentSettings.invertY?-1:1;
-    controls.yaw-=dx*sens*1.8;
-    controls.pitch=Math.max(-Math.PI/2+0.001,Math.min(Math.PI/2-0.001,controls.pitch-dy*sens*1.8*invertY));
-  },{passive:true});
-  look.addEventListener('touchend',()=>{lookLast=null;});
-  const hold=(id,down,up)=>{
-    const el=document.getElementById(id); if(!el)return;
-    el.addEventListener('touchstart',e=>{e.preventDefault();down();},{passive:false});
-    el.addEventListener('touchend',e=>{e.preventDefault();up&&up();},{passive:false});
-  };
-  hold('bw-touch-jump',()=>keys.Space=true,()=>keys.Space=false);
-  const sneakBtn=document.getElementById('bw-touch-sneak');
-  sneakBtn?.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    player.isCrouching=!player.isCrouching;
-    keys.ShiftLeft=player.isCrouching;
-    sneakBtn.style.filter=player.isCrouching?'brightness(1.4)':'';
-  },{passive:false});
-  const sprintBtn=document.getElementById('bw-touch-sprint');
-  sprintBtn?.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    player.isSprinting=!player.isSprinting;
-    keys.ControlLeft=player.isSprinting;
-    sprintBtn.style.filter=player.isSprinting?'brightness(1.4)':'';
-  },{passive:false});
-  const tapHold=(id,onTap,onHold,onUp,ms)=>{
-    const el=document.getElementById(id); if(!el)return;
-    let t0=0,timer=null,held=false;
-    el.addEventListener('touchstart',e=>{
-      e.preventDefault(); t0=Date.now(); held=false;
-      timer=setTimeout(()=>{held=true; onHold&&onHold();}, ms||280);
-    },{passive:false});
-    el.addEventListener('touchend',e=>{
-      e.preventDefault(); clearTimeout(timer);
-      if(held) onUp&&onUp();
-      else onTap&&onTap();
-    },{passive:false});
-  };
-  tapHold('bw-touch-atk',
-    ()=>{ if(typeof doAttack==='function') doAttack(); },
-    ()=>{ player.mining=true; },
-    ()=>{ player.mining=false; }
-  );
-  tapHold('bw-touch-place',
-    ()=>{ if(typeof tryPlaceBlock==='function') tryPlaceBlock(); },
-    ()=>{ player.placing=true; if(typeof tryPlaceBlock==='function') tryPlaceBlock(); },
-    ()=>{ player.placing=false; }
-  );
-  document.getElementById('bw-touch-inv')?.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    if(typeof toggleMenu==='function') toggleMenu(activeMenu==='inventory'?null:'inventory');
-  },{passive:false});
-  document.getElementById('bw-touch-shop')?.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    if(typeof toggleMenu==='function') toggleMenu(activeMenu==='shop'?null:'shop');
-  },{passive:false});
-  document.getElementById('bw-touch-chat')?.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    const inp=document.getElementById('chat-input')||document.getElementById('ingame-chat-input');
-    if(inp){ inp.style.display='block'; inp.focus(); }
-  },{passive:false});
 }
 
 function raycastNPC(){
@@ -3041,270 +1782,6 @@ function raycastNPC(){
 
 // 視点モード: 0=1人称, 1=3人称(背後), 2=3人称(正面)
 let thirdPersonMode=0;
-
-// v26追記: 影MOD設定欄(ライブ調整用setter群)
-window._bwSetShadowEnabled=function(on){
-  if(typeof renderer!=='undefined' && renderer) renderer.shadowMap.enabled=!!on;
-  localStorage.setItem('bw_shadow_on', on?'1':'0');
-};
-window._bwSetShadowStrength=function(v){
-  // 濃さ = 太陽光(直射)と環境光の比率を調整。値が大きいほど影が濃く(環境光が弱く)なる。
-  const t=Math.max(0,Math.min(100,+v))/100;
-  if(!window._bwSunLight||!scene) return;
-  window._bwSunLight.intensity=0.6+t*0.6; // 0.6〜1.2
-  scene.traverse(o=>{ if(o.isAmbientLight) o.intensity=0.55-t*0.3; if(o.isHemisphereLight) o.intensity=0.4-t*0.2; });
-  localStorage.setItem('bw_shadow_strength', v);
-};
-window._bwSetShadowSoftness=function(v){
-  const t=Math.max(0,Math.min(100,+v))/100;
-  if(!window._bwSunLight) return;
-  window._bwSunLight.shadow.radius=0.5+t*4.5; // 0.5(硬い)〜5.0(柔らかい)
-  if(typeof renderer!=='undefined' && renderer) renderer.shadowMap.type=t>0.5?THREE.PCFSoftShadowMap:THREE.PCFShadowMap;
-  localStorage.setItem('bw_shadow_softness', v);
-};
-window._bwSetShadowRange=function(v){
-  const range=Math.max(20,Math.min(80,+v));
-  if(!window._bwSunLight) return;
-  const cam=window._bwSunLight.shadow.camera;
-  cam.left=-range; cam.right=range; cam.top=range; cam.bottom=-range;
-  cam.updateProjectionMatrix();
-  localStorage.setItem('bw_shadow_range', v);
-};
-// 保存値の復元、および設定パネルを開いた時にUIへ反映
-(function _bwRestoreShadowSettings(){
-  const on=localStorage.getItem('bw_shadow_on');
-  const strength=localStorage.getItem('bw_shadow_strength')||'60';
-  const softness=localStorage.getItem('bw_shadow_softness')||'40';
-  const range=localStorage.getItem('bw_shadow_range')||'48';
-  const applyAll=()=>{
-    if(on!==null) window._bwSetShadowEnabled(on==='1');
-    window._bwSetShadowStrength(strength);
-    window._bwSetShadowSoftness(softness);
-    window._bwSetShadowRange(range);
-    const e1=document.getElementById('set-shadowOn'); if(e1&&on!==null) e1.checked=on==='1';
-    const e2=document.getElementById('set-shadowStrength'); if(e2) e2.value=strength;
-    const e3=document.getElementById('set-shadowSoftness'); if(e3) e3.value=softness;
-    const e4=document.getElementById('set-shadowRange'); if(e4) e4.value=range;
-  };
-  setTimeout(applyAll,1300);
-})();
-
-// ================================================================
-// v26追記: 効果音(SE)システム
-// 外部音声ファイルを一切使わず、Web Audio APIのオシレーター/ノイズ生成だけで
-// 軽量な効果音を合成する(ネットワーク接続やアセット配置が不要)。
-// ================================================================
-const _bwSFXImpl=(()=>{
-  let ctx=null;
-  function getCtx(){
-    if(!ctx){
-      try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
-    }
-    if(ctx&&ctx.state==='suspended') ctx.resume().catch(()=>{});
-    return ctx;
-  }
-  function jitter(v,amt){ return v*(1+(Math.random()*2-1)*(amt||0.06)); }
-  function tone(freq,dur,type,vol,freqEnd){
-    const c=getCtx(); if(!c) return;
-    try{
-      const osc=c.createOscillator(), gain=c.createGain();
-      osc.type=type||'sine';
-      osc.frequency.setValueAtTime(jitter(freq,0.03),c.currentTime);
-      if(freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(1,freqEnd),c.currentTime+dur);
-      gain.gain.setValueAtTime(vol??0.15,c.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
-      osc.connect(gain); gain.connect(c.destination);
-      osc.start(); osc.stop(c.currentTime+dur);
-    }catch(e){}
-  }
-  function noise(dur,vol,bp){
-    const c=getCtx(); if(!c) return;
-    try{
-      const n=Math.max(1,Math.floor(c.sampleRate*dur));
-      const buf=c.createBuffer(1,n,c.sampleRate);
-      const data=buf.getChannelData(0);
-      for(let i=0;i<n;i++) data[i]=(Math.random()*2-1)*Math.pow(1-i/n,0.7);
-      const src=c.createBufferSource(); src.buffer=buf;
-      const gain=c.createGain(); gain.gain.value=vol??0.12;
-      if(bp){
-        const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=bp; f.Q.value=1.1;
-        src.connect(f); f.connect(gain);
-      } else src.connect(gain);
-      gain.connect(c.destination);
-      src.start();
-    }catch(e){}
-  }
-  return {
-    hit:(m=1)=>tone(jitter(170,0.08),0.11,'square',0.16*m,80),
-    hitCrit:(m=1)=>{tone(260,0.14,'square',0.2*m,110);setTimeout(()=>tone(520,0.08,'triangle',0.12*m,760),35);},
-    hitWood:(m=1)=>{noise(0.08,0.1*m,700);tone(210,0.06,'triangle',0.08*m,90);},
-    hitStone:(m=1)=>{noise(0.07,0.12*m,1200);tone(140,0.05,'square',0.07*m,70);},
-    hitSword:(m=1)=>{tone(420,0.06,'sawtooth',0.1*m,180);noise(0.05,0.08*m,1800);},
-    place:(m=1)=>noise(0.06,0.1*m,900),
-    placeWool:(m=1)=>noise(0.05,0.08*m,500),
-    placeWood:(m=1)=>{noise(0.07,0.1*m,650);tone(180,0.04,'triangle',0.05*m);},
-    placeStone:(m=1)=>{noise(0.06,0.11*m,1400);tone(120,0.04,'square',0.05*m);},
-    placeDirt:(m=1)=>noise(0.07,0.09*m,280),
-    placeIce:(m=1)=>{tone(980,0.05,'sine',0.07*m,1400);noise(0.04,0.05*m,1800);},
-    placeMetal:(m=1)=>{tone(620,0.05,'triangle',0.08*m,900);tone(980,0.04,'sine',0.05*m);},
-    breakBlock:(m=1)=>noise(0.14,0.16*m,800),
-    breakWool:(m=1)=>noise(0.1,0.1*m,400),
-    bedBreak:(m=1)=>{tone(520,0.28,'sawtooth',0.2*m,80);setTimeout(()=>noise(0.22,0.16*m,300),70);},
-    jump:(m=1)=>tone(jitter(330,0.05),0.07,'sine',0.09*m,560),
-    land:(m=1)=>noise(0.08,0.1*m,220),
-    splash:(m=1)=>{noise(0.16,0.12*m,500);tone(240,0.12,'sine',0.06*m,90);},
-    lava:(m=1)=>{noise(0.2,0.1*m,180);tone(90,0.2,'sawtooth',0.05*m,40);},
-    click:(m=1)=>tone(680,0.04,'sine',0.07*m),
-    hover:(m=1)=>tone(920,0.03,'sine',0.04*m),
-    coin:(m=1)=>tone(900,0.09,'sine',0.13*m,1400),
-    iron:(m=1)=>tone(500,0.07,'triangle',0.1*m,820),
-    gold:(m=1)=>{tone(740,0.07,'sine',0.11*m,980);setTimeout(()=>tone(980,0.08,'sine',0.1*m,1200),50);},
-    diamond:(m=1)=>{tone(1200,0.08,'sine',0.12*m);setTimeout(()=>tone(1600,0.1,'sine',0.1*m),70);},
-    death:(m=1)=>tone(200,0.42,'sawtooth',0.18*m,40),
-    hurt:(m=1)=>tone(160,0.16,'square',0.14*m,70),
-    levelup:(m=1)=>{tone(523,0.09,'sine',0.13*m);setTimeout(()=>tone(659,0.09,'sine',0.13*m),90);setTimeout(()=>tone(784,0.16,'sine',0.13*m),180);},
-    win:(m=1)=>{tone(523,0.12,'triangle',0.14*m);setTimeout(()=>tone(659,0.12,'triangle',0.14*m),120);setTimeout(()=>tone(784,0.12,'triangle',0.14*m),240);setTimeout(()=>tone(1046,0.22,'sine',0.16*m),360);},
-    lose:(m=1)=>{tone(392,0.18,'sawtooth',0.14*m,200);setTimeout(()=>tone(261,0.28,'sawtooth',0.14*m,90),180);},
-    start:(m=1)=>{tone(440,0.08,'square',0.1*m);setTimeout(()=>tone(660,0.12,'square',0.12*m),100);},
-    shop:(m=1)=>tone(760,0.06,'triangle',0.08*m,500),
-    deny:(m=1)=>tone(140,0.14,'square',0.12*m,90),
-    bow:(m=1)=>tone(380,0.08,'triangle',0.08*m,700),
-    bowHit:(m=1)=>{tone(640,0.07,'square',0.1*m,240);noise(0.05,0.07*m,1400);},
-    eat:(m=1)=>{noise(0.08,0.07*m,300);tone(180,0.08,'sine',0.05*m);},
-    chat:(m=1)=>tone(540,0.05,'sine',0.06*m),
-    notify:(m=1)=>{tone(880,0.06,'sine',0.09*m);setTimeout(()=>tone(1174,0.08,'sine',0.08*m),70);},
-    emote:(m=1)=>tone(700,0.1,'triangle',0.08*m,1100),
-    fall:(m=1)=>tone(420,0.25,'sine',0.08*m,90)
-  };
-})();
-window._bwSFXEnabled = true; // 実際のミュートは効果音スライダー(currentSettings.sfx)で制御
-window._bwPlaySFX=function(name){
-  const vol=(typeof currentSettings!=='undefined'?currentSettings.sfx:80);
-  if(vol<=0) return;
-  if(!window._bwSFXEnabled) return;
-  try{ _bwSFXImpl[name] && _bwSFXImpl[name](vol/100); }catch(e){}
-};
-window._bwPlayBlockSFX=function(kind,type){
-  const t=String(type||'');
-  let name=kind==='place'?'place':'breakBlock';
-  if(/wool/.test(t)) name=kind==='place'?'placeWool':'breakWool';
-  else if(/wood|log|leaves|plank/.test(t)) name=kind==='place'?'placeWood':'hitWood';
-  else if(/stone|cobble|end|obsidian|ore|brick/.test(t)) name=kind==='place'?'placeStone':'hitStone';
-  else if(/dirt|grass|sand|soul/.test(t)) name=kind==='place'?'placeDirt':'breakWool';
-  else if(/ice|packed/.test(t)) name=kind==='place'?'placeIce':'splash';
-  else if(/iron|gold|diamond|emerald/.test(t)) name=kind==='place'?'placeMetal':'hitSword';
-  window._bwPlaySFX(name);
-};
-
-// ================================================================
-// v26追記: 当たり判定/視線/AIの思考を可視化するデバッグシステム
-// ================================================================
-window._bwHitboxDebugEnabled = localStorage.getItem('bw_hitbox_debug')==='1';
-window._bwSetHitboxDebug=function(on){
-  window._bwHitboxDebugEnabled=!!on;
-  localStorage.setItem('bw_hitbox_debug', on?'1':'0');
-  if(!on) _bwClearHitboxDebug();
-  const btn=document.getElementById('bw-debug-arena-btn');
-  if(btn) btn.style.display=on?'block':'none';
-};
-// ページ読み込み時、保存済みの設定を反映(ロビー画面の検証ステージボタン表示など)
-setTimeout(()=>{
-  const cb=document.getElementById('set-showHitboxDebug');
-  if(cb) cb.checked=window._bwHitboxDebugEnabled;
-  const btn=document.getElementById('bw-debug-arena-btn');
-  if(btn) btn.style.display=window._bwHitboxDebugEnabled?'block':'none';
-},500);
-let _bwDebugGroup=null;
-function _bwClearHitboxDebug(){
-  if(_bwDebugGroup && scene){ scene.remove(_bwDebugGroup); }
-  _bwDebugGroup=null;
-}
-function _bwUpdateHitboxDebug(){
-  if(!window._bwHitboxDebugEnabled || !scene || !THREE) { return; }
-  if(!_bwDebugGroup){ _bwDebugGroup=new THREE.Group(); _bwDebugGroup.name='_bwDebugGroup'; scene.add(_bwDebugGroup); }
-  // 毎フレーム作り直す(数が少ないため負荷は軽微)
-  while(_bwDebugGroup.children.length) _bwDebugGroup.remove(_bwDebugGroup.children[0]);
-
-  // ① 敵/AIの当たり判定(バウンディングボックス、緑=通常、赤=戦闘中)
-  if(typeof enemies!=='undefined'){
-    enemies.forEach(e=>{
-      if(!e || !e.userData) return;
-      const box=new THREE.Box3().setFromObject(e);
-      const color=e.userData.state==='combat'?0xff3333:e.userData.state==='chase'?0xffaa00:0x33ff33;
-      const helper=new THREE.Box3Helper(box,color);
-      _bwDebugGroup.add(helper);
-
-      // ② AIの意図: 状態ラベル+ターゲット方向への矢印
-      if(e.userData.moveTarget){
-        const from=e.position.clone().add(new THREE.Vector3(0,1.2,0));
-        const to=new THREE.Vector3(e.userData.moveTarget.x,e.position.y+1.2,e.userData.moveTarget.z);
-        const dir=new THREE.Vector3().subVectors(to,from);
-        const len=Math.min(6,dir.length());
-        if(len>0.1){
-          dir.normalize();
-          const arrow=new THREE.ArrowHelper(dir,from,len,0xffff00,0.4,0.25);
-          _bwDebugGroup.add(arrow);
-        }
-      }
-    });
-  }
-
-  // ③ 自分の視線(攻撃レイキャスト方向、水色の線)
-  if(typeof player!=='undefined' && player && typeof controls!=='undefined'){
-    const eyePos=new THREE.Vector3(player.pos.x,player.pos.y+1.6,player.pos.z);
-    const dir=new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(controls.pitch,controls.yaw,0,'YXZ'));
-    const geo=new THREE.BufferGeometry().setFromPoints([eyePos,eyePos.clone().add(dir.multiplyScalar(4.5))]);
-    const mat=new THREE.LineBasicMaterial({color:0x33ccff});
-    _bwDebugGroup.add(new THREE.Line(geo,mat));
-  }
-
-  // ④ マルチプレイヤーの当たり判定(水色ボックス)
-  if(typeof mpMeshes!=='undefined'){
-    Object.values(mpMeshes).forEach(m=>{
-      if(!m) return;
-      const box=new THREE.Box3().setFromObject(m);
-      _bwDebugGroup.add(new THREE.Box3Helper(box,0x33aaff));
-    });
-  }
-}
-
-// v26追記: デバッグ用対戦検証ステージ
-// 1つの島にAIと「模擬マルチプレイヤー」を至近距離に配置し、
-// 別タブ/別デバイスを用意しなくても近接戦闘・当たり判定・
-// マルチプレイヤー描画パス(getOrCreateMPMesh経由)を検証できるようにする。
-// 模擬プレイヤーはSupabaseとは一切通信しない、ローカルで動くダミーなので
-// 実際のオンライン対戦の参加者数を増やしたり課金/DBを消費したりしない。
-function startDebugArena(){
-  player.isSpectator=false; player.spectatorMode=false; player.team='Blue'; teamMode=2;
-  gameMode='solo'; currentMatchId=null; currentMapSeed=424242; // 固定シードで毎回同じ検証マップに
-  startGamePlay();
-  window._bwHitboxDebugEnabled=true; // 検証ステージでは可視化を自動ON
-  localStorage.setItem('bw_hitbox_debug','1');
-  const cb=document.getElementById('set-showHitboxDebug'); if(cb) cb.checked=true;
-
-  setTimeout(()=>{
-    // ① AIを至近距離に強制配置(通常マップだと拠点同士が離れているため)
-    if(typeof enemies!=='undefined' && enemies[0]){
-      enemies[0].position.set(player.pos.x+8, player.pos.y, player.pos.z);
-    }
-    // ② 模擬マルチプレイヤー(Supabase通信なしのローカルダミー)を1体スポーン。
-    //    doAttackのMPヒット判定・getOrCreateMPMeshの描画パスをここで検証できる。
-    const dummyUid='__debug_dummy__';
-    if(mpMeshes[dummyUid]){ if(mpMeshes[dummyUid].parent) scene.remove(mpMeshes[dummyUid]); delete mpMeshes[dummyUid]; }
-    const mesh=getOrCreateMPMesh(dummyUid,TEAM_COLOR.Red||0xcc3333,'検証用ダミー','');
-    mesh.position.set(player.pos.x-8, player.pos.y, player.pos.z);
-    mesh.userData.hp=20;
-    if(window._bwDebugDummyInterval) clearInterval(window._bwDebugDummyInterval);
-    window._bwDebugDummyInterval=setInterval(()=>{
-      if(!mesh||gameMode!=='solo'){ clearInterval(window._bwDebugDummyInterval); return; }
-      const t=Date.now()/1000;
-      mesh.position.x=player.pos.x-8+Math.sin(t*0.7)*3;
-      mesh.position.z=player.pos.z+Math.cos(t*0.7)*3;
-      if(mesh.userData.hp<20) mesh.userData.hp=Math.min(20,mesh.userData.hp+0.02); // ゆっくり自動回復(繰り返しテスト用)
-    },100);
-    announce('🧪 検証ステージ: AI(右)と模擬プレイヤー(左)が至近距離にいます','#cc88ff');
-  },900);
-}
 
 function toggleThirdPerson(){
   thirdPersonMode=(thirdPersonMode+1)%3;
@@ -3346,64 +1823,73 @@ function doAttack(){
   const sel=player.inv[player.selectedIdx];
   if(sel?.type==='bow'){shootBow();return;}
 
-  // 常に目線基準（FOV・視点モード非依存）
   const ATTACK_REACH=4.5;
   const eyePos=new THREE.Vector3(player.pos.x,player.pos.y+1.6,player.pos.z);
-  const dir=new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(controls.pitch,controls.yaw,0,'YXZ'));
-  const ray=new THREE.Raycaster();
-  ray.set(eyePos,dir);
-  ray.far=ATTACK_REACH;
+  const dir=new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(controls.pitch,controls.yaw,0,'YXZ')).normalize();
+  const ray=new THREE.Raycaster(eyePos,dir,0,ATTACK_REACH);
 
-  // v26修正: enemies配列を「再帰的に」レイキャストし(true)、
-  // ヒットした実メッシュから userData.isEnemy を持つルートまで辿る。
+  // AI: recursive hit test against the actual skinned meshes.
   const eHit=ray.intersectObjects(enemies,true).find(h=>h.distance<=ATTACK_REACH);
   if(eHit){
     const enemy=_bwResolveHitRoot(eHit.object,'isEnemy');
-    if(!enemy){return;}
-    const dmg=calcDmg()*(player.vel.y<-2?1.5:1);
-    if(player.vel.y<-2){announce('⚡ Critical!','#ffff00');window._bwPlaySFX('hitCrit');}
-    else window._bwPlaySFX('hit');
-    enemy.userData.hp-=dmg;
-    window._bwLastHitDebug=`melee→AI dmg=${dmg.toFixed(1)} hp残=${enemy.userData.hp.toFixed(1)} dist=${eHit.distance.toFixed(2)} @${new Date().toLocaleTimeString()}`;
-    spawnParticles(enemy.position.clone(),'#ff4444',5);
-    if(typeof showDamageNumber==='function') showDamageNumber(dmg,enemy.position.clone().add(new THREE.Vector3(0,1.6,0)),'#ff5555');
-    if(typeof showDamageNumber==='function') showDamageNumber(dmg, enemy.position.clone().add(new THREE.Vector3(0,1.6,0)), player.vel.y<-2?'#ffff00':'#ff5555');
-    const kb=new THREE.Vector3().subVectors(enemy.position,player.pos).normalize();
-    if(enemy.userData.vel)enemy.userData.vel.add(new THREE.Vector3(kb.x*3,.5,kb.z*3));
-    shakeIntensity=.07;
-    if(enemy.userData.hp<=0)killEnemy(enemy);
-    return;
+    if(enemy && enemy.userData.team!==player.team){
+      const dmg=calcDmg()*(player.vel.y<-2?1.5:1);
+      if(player.vel.y<-2)announce('⚡ Critical!','#ffff00');
+      enemy.userData.hp=Math.max(0,(+enemy.userData.hp||20)-dmg);
+      window._bwLastHitDebug=`melee→AI dmg=${dmg.toFixed(1)} hp残=${enemy.userData.hp.toFixed(1)} dist=${eHit.distance.toFixed(2)}`;
+      spawnParticles(enemy.position.clone(),'#ff4444',5);
+      if(typeof showDamageNumber==='function') showDamageNumber(dmg,enemy.position.clone().add(new THREE.Vector3(0,1.6,0)),'#ff5555');
+      const kb=new THREE.Vector3().subVectors(enemy.position,player.pos).normalize();
+      if(enemy.userData.vel)enemy.userData.vel.add(new THREE.Vector3(kb.x*3,.5,kb.z*3));
+      shakeIntensity=.07;
+      const ra=playerMesh3p?.getObjectByName('ra'); if(ra)ra.rotation.x=-1.1;
+      if(enemy.userData.hp<=0)killEnemy(enemy);
+      return;
+    }
   }
 
-  if(gameMode==='multi'){
-    const mpRoots=Object.values(mpMeshes);
-    if(mpRoots.length){
-      // v26修正: 同様にマルチプレイヤーのヒット判定も再帰レイキャスト+ルート解決に変更
-      const mpHit=ray.intersectObjects(mpRoots,true).find(h=>h.distance<=ATTACK_REACH);
-      if(mpHit){
-        const mesh=_bwResolveHitRoot(mpHit.object,'isMPPlayer');
-        const uid=mesh?Object.keys(mpMeshes).find(k=>mpMeshes[k]===mesh):null;
-        if(uid){
-          const dmg2=calcDmg();
-          sendDamageSupabase(uid,dmg2,'sword');
-          window._bwPlaySFX('hit');
-          window._bwLastHitDebug=`melee→MP(${uid.slice(0,8)}) dmg=${dmg2.toFixed(1)} dist=${mpHit.distance.toFixed(2)} @${new Date().toLocaleTimeString()}`;
-          sbRequest({action:'actionEvent',uid:myPeerId,actionType:'attack',itemType:sel?.type||'sword',x:player.pos.x,y:player.pos.y+1.2,z:player.pos.z,yaw:controls.yaw,pitch:controls.pitch});
-          if(typeof showDamageNumber==='function') showDamageNumber(dmg2, mesh.position.clone().add(new THREE.Vector3(0,1.6,0)),'#ff5555');
-        }
-      }
+  if(gameMode!=='multi')return;
+
+  const mpRoots=Object.entries(mpMeshes).filter(([uid,m])=>m&&m.userData?.team!==player.team&&uid!==myPeerId);
+  let hit=null;
+  const hits=ray.intersectObjects(mpRoots.map(x=>x[1]),true);
+  if(hits.length) hit=hits.find(h=>h.distance<=ATTACK_REACH)||null;
+
+  // Small, explicit player hitbox fallback. This fixes misses caused by
+  // animated body parts/skin pivots while keeping the reach and view cone.
+  if(!hit){
+    let best=null,bestDist=Infinity;
+    for(const [uid,m] of mpRoots){
+      const target=m.position.clone().add(new THREE.Vector3(0,0.9,0));
+      const along=target.clone().sub(eyePos).dot(dir);
+      if(along<0||along>ATTACK_REACH)continue;
+      const closest=eyePos.clone().addScaledVector(dir,along);
+      const lateral=closest.distanceTo(target);
+      const vertical=Math.abs((m.position.y+0.9)-closest.y);
+      if(lateral<=0.85 && vertical<=1.15 && along<bestDist){bestDist=along;best={uid,m};}
     }
+    if(best){
+      const target=best.m.position.clone().add(new THREE.Vector3(0,0.9,0));
+      hit={distance:bestDist,object:best.m,userDataFallback:true};
+    }
+  }
+
+  if(hit){
+    const mesh=hit.object.userData?.isMPPlayer?hit.object:_bwResolveHitRoot(hit.object,'isMPPlayer');
+    if(!mesh)return;
+    const uid=Object.keys(mpMeshes).find(k=>mpMeshes[k]===mesh);
+    if(!uid||mesh.userData.team===player.team)return;
+    const dmg2=calcDmg()*(player.vel.y<-2?1.5:1);
+    sendDamageSupabase(uid,dmg2,'sword');
+    window._bwLastHitDebug=`melee→MP(${uid.slice(0,8)}) dmg=${dmg2.toFixed(1)} dist=${Number(hit.distance).toFixed(2)}`;
+    sbRequest({action:'actionEvent',uid:myPeerId,actionType:'attack',itemType:sel?.type||'sword',x:player.pos.x,y:player.pos.y+1.2,z:player.pos.z,yaw:controls.yaw,pitch:controls.pitch});
+    if(typeof showDamageNumber==='function') showDamageNumber(dmg2,mesh.position.clone().add(new THREE.Vector3(0,1.6,0)),'#ff5555');
   }
 }
 
 function killEnemy(enemy){
   announce('💀 KILL!','#FFAA00');
   playerData.kills++;
-  window._bwKillStreak=(window._bwKillStreak||0)+1;
-  if(window._bwKillStreak>=2){
-    announce((window._bwKillStreak>=5?'🔥 MEGA ':'⚡ ')+window._bwKillStreak+' STREAK!','#ffaa00');
-    window._bwPlaySFX('notify');
-  }
   document.getElementById('hud-kills').textContent=playerData.kills;
   // キルフィード表示
   const victimName = enemy.userData?.name || (enemy.userData?.team ? enemy.userData.team+' プレイヤー' : '敵');
@@ -3438,7 +1924,7 @@ function showKillFeed(killer, victim, isGolemKill){
   const row=document.createElement('div');
   row.style.cssText='background:rgba(0,0,0,0.65);padding:4px 10px;border-radius:3px;font-size:12px;color:#fff;white-space:nowrap;animation:killfeedIn 0.3s ease';
   const icon=isGolemKill?'🤖':'⚔️';
-  row.innerHTML=`<span style="color:#ffaa00;font-weight:bold">${bwEscapeHTML(killer)}</span> ${icon} <span style="color:#aaa">${bwEscapeHTML(victim)}</span>`;
+  row.innerHTML=`<span style="color:#ffaa00;font-weight:bold">${_bwEscapeHtml(killer)}</span> ${icon} <span style="color:#aaa">${_bwEscapeHtml(victim)}</span>`;
   feed.appendChild(row);
   while(feed.children.length>5) feed.removeChild(feed.firstChild);
   setTimeout(()=>{row.style.opacity='0';row.style.transition='opacity 0.5s';setTimeout(()=>row.remove(),500);},4500);
@@ -3541,9 +2027,9 @@ function toggleEmoteMenu(){
   el=document.createElement('div');
   el.id='emote-menu';
   el.style.cssText='position:fixed;bottom:140px;left:50%;transform:translateX(-50%);display:flex;gap:8px;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;z-index:200';
-  EMOTES.forEach((em,i)=>{
+  EMOTES.forEach(em=>{
     const btn=document.createElement('div');
-    btn.innerHTML=`<div style="font-size:28px">${em.emoji}</div><div style="font-size:10px;color:#ccc">${i+1} ${em.label}</div>`;
+    btn.innerHTML=`<div style="font-size:28px">${em.emoji}</div><div style="font-size:10px;color:#ccc">${em.label}</div>`;
     btn.style.cssText='cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.15s;text-align:center';
     btn.onmouseenter=()=>btn.style.background='rgba(255,255,255,0.2)';
     btn.onmouseleave=()=>btn.style.background='';
@@ -3561,7 +2047,7 @@ function playEmote(key, emoji){
   showEmoteBubble(player.name, emoji, true);
   // マルチプレイヤー時は他プレイヤーにも通知（ポーズキー+絵文字の両方を送信）
   if(gameMode==='multi'){
-    sbRequest({action:'postMsg',name:player.name,msg:'__EMOTE__'+key+'|'+emoji,color:'#ffff00',pcId:myPeerId,scope:'battle',team:player.team});
+    sbRequest({action:'postMsg',name:player.name,msg:'__EMOTE__'+key+'|'+emoji,color:'#ffff00',pcId:myPeerId,matchId:currentMatchId,scope:'battle',team:player.team});
   }
 }
 
@@ -3752,19 +2238,15 @@ function _applyConsumableEffect(type){
   if(type==='g_apple'){
     player.hp=Math.min(player.maxHp,player.hp+6);
     activateBuff('regen',5,'#ff88cc','💗 再生');
-    window._bwPlaySFX('eat');
     announce('🍎 +6 HP','#55ff55');
   } else if(type==='hp_pot'){
     player.hp=Math.min(player.maxHp,player.hp+4);
-    window._bwPlaySFX('eat');
     announce('❤️ +4 HP','#ff5555');
   } else if(type==='bread'){
     player.hunger=Math.min(20,player.hunger+3);
-    window._bwPlaySFX('eat');
     announce('🍞 空腹+3','#ccaa66');
   } else if(type==='steak'){
     player.hunger=Math.min(20,player.hunger+8);
-    window._bwPlaySFX('eat');
     announce('🥩 空腹+8','#cc7744');
   }
 }
@@ -3783,21 +2265,20 @@ function physicsStep(dt){
   const EYE_H=player.isCrouching?1.27:1.62;
 
   if(player.spectatorMode){
-    const basespd = keys['ControlLeft'] ? 1.15 : 0.42;
+    const basespd = keys['ShiftLeft'] ? 0.15 : (keys['ControlLeft'] ? 1.2 : 0.45);
     const spd = basespd * dt / 0.016;
     const smv = new THREE.Vector3();
     if(keys['KeyW'])smv.z-=1;if(keys['KeyS'])smv.z+=1;
     if(keys['KeyA'])smv.x-=1;if(keys['KeyD'])smv.x+=1;
     if(smv.lengthSq()>0){
       smv.normalize().multiplyScalar(spd);
-      // 水平面のみ。視点の上下では上昇・下降しない
       smv.applyAxisAngle(new THREE.Vector3(0,1,0),controls.yaw);
-      player.pos.x+=smv.x;player.pos.z+=smv.z;
+      const pitchFwd = -Math.sin(controls.pitch)*spd;
+      player.pos.x+=smv.x;player.pos.z+=smv.z;player.pos.y+=pitchFwd;
     }
-    if(keys['Space']) player.pos.y+=spd;
-    else if(keys['ShiftLeft']||keys['KeyC']) player.pos.y-=spd;
-    if(playerMesh3p) playerMesh3p.visible=false;
-    camera.position.set(player.pos.x,player.pos.y+1.6,player.pos.z);
+    if(keys['Space'])    player.pos.y+=spd*0.8;
+    if(keys['ShiftLeft'])player.pos.y-=spd*0.8;
+    camera.position.set(player.pos.x,player.pos.y+EYE_H,player.pos.z);
     camera.rotation.set(controls.pitch,controls.yaw,0,'YXZ');
     return;
   }
@@ -3834,7 +2315,6 @@ function physicsStep(dt){
   if(keys['Space']&&player.onGround){
     player.vel.y=JUMP_F;
     player.onGround=false;
-    window._bwPlaySFX('jump');
     if(player.isSprinting){
       const fwd=new THREE.Vector3(0,0,-0.2).applyAxisAngle(new THREE.Vector3(0,1,0),controls.yaw);
       mv.x+=fwd.x;mv.z+=fwd.z;
@@ -3865,7 +2345,7 @@ function physicsStep(dt){
       if(player.pos.x+PW<=bp.x-0.5||player.pos.x-PW>=bp.x+0.5)continue;
       if(player.pos.z+PW<=bp.z-0.5||player.pos.z-PW>=bp.z+0.5)continue;
       if(player.vel.y<=0&&player.pos.y<bp.y+0.5&&player.pos.y>=bp.y-0.5){
-        if(window._bwLandingDamage) window._bwLandingDamage(Math.abs(player.vel.y));
+        if(player.vel.y<-0.6){const fd=Math.floor(-player.vel.y*6-3);if(fd>0)applyDamage(fd);}
         player.pos.y=bp.y+0.5;player.vel.y=0;player.onGround=true;
       }else if(player.vel.y>0&&player.pos.y+PH>bp.y-0.5&&player.pos.y+PH<=bp.y+0.5){
         player.pos.y=bp.y-0.5-PH;player.vel.y=0;
@@ -3927,22 +2407,15 @@ function physicsStep(dt){
       if(!emoteActive){
         player._emoteKey=null;
         const bodyPart=playerMesh3p.getObjectByName('body');
-        _bwApplyHeadLook(playerMesh3p, controls.yaw, controls.pitch);
-        const str=Math.max(0,Math.min(1,(currentSettings.anim||70)/100));
-        const wt=(player._walkT=(player._walkT||0)+(hasInput?dt*(player.isSprinting?16:10):0));
-        const sw=hasInput?Math.sin(wt)*0.55*str:0;
+        if(bodyPart) bodyPart.rotation.x = player.isCrouching ? 0.35 : 0;
+        const hd=playerMesh3p.getObjectByName('head');
+        if(hd)hd.rotation.x=controls.pitch*0.8 + (player.isCrouching?0.15:0);
+        const wt=(player._walkT=(player._walkT||0)+(hasInput?dt*(player.isSprinting?14:8):0));
+        const sw=hasInput?Math.sin(wt)*0.6:0;
         const ra=playerMesh3p.getObjectByName('ra'),la=playerMesh3p.getObjectByName('la');
         const rl=playerMesh3p.getObjectByName('rl'),ll=playerMesh3p.getObjectByName('ll');
-        const swinging=window._bwArmSwingUntil && Date.now()<window._bwArmSwingUntil;
-        const swingPhase=swinging?Math.sin((window._bwArmSwingUntil-Date.now())/280*Math.PI):0;
-        if(bodyPart){
-          bodyPart.rotation.x=(player.isCrouching?0.28*str:0)+(player.isSprinting?0.06*str:0);
-          bodyPart.rotation.z=0;
-        }
-        if(ra){ ra.rotation.x=swinging?(-1.15*swingPhase*str):(-Math.max(-0.2,sw)+(player.isCrouching?0.12:0)); ra.rotation.z=swinging?0.18*str:0; }
-        if(la){ la.rotation.x=Math.min(0.2,sw)+(player.isCrouching?0.12:0); la.rotation.z=0; }
-        if(rl) rl.rotation.x=sw;
-        if(ll) ll.rotation.x=-sw;
+        if(ra)ra.rotation.x=-sw+(player.isCrouching?0.2:0);if(la)la.rotation.x=sw+(player.isCrouching?0.2:0);
+        if(rl)rl.rotation.x=sw;if(ll)ll.rotation.x=-sw;
       }
     }
   } else {
@@ -3954,22 +2427,12 @@ function physicsStep(dt){
   if(shakeIntensity>0){shakeIntensity-=dt*3.5;if(shakeIntensity<0)shakeIntensity=0;}
 }
 
-window._bwAltZoom=0;
-window._bwBowZoom=0;
 function updateCamera(dt){
   const baseFOV=currentSettings.fov||70;
-  let target=baseFOV;
-  if(currentSettings.dynamicFOV!==false && player.isSprinting && player.onGround) target=Math.min(baseFOV+8,120);
-  if(_bowCharging){
-    const ch=Math.min((Date.now()-_bowChargeStart)/2000,1);
-    window._bwBowZoom=8+ch*14;
-  } else {
-    window._bwBowZoom=Math.max(0,(window._bwBowZoom||0)-dt*40);
-  }
-  if(window._bwBowZoom>0) target=Math.max(16, target-window._bwBowZoom);
-  if(window._bwAltZoom>0) target=baseFOV-(baseFOV-10)*Math.min(1,window._bwAltZoom);
-  camera.fov+=(target-camera.fov)*Math.min(1,dt*10);
-  camera.far=currentSettings.liteMode?80:(currentSettings.drawDist||150);
+  const dynamicFOV=currentSettings.dynamicFOV!==false;
+  const targetFOV=dynamicFOV&&player.isSprinting&&player.onGround?Math.min(baseFOV+10,120):baseFOV;
+  camera.fov+=(targetFOV-camera.fov)*Math.min(1,dt*8);
+  camera.far=currentSettings.drawDist||150;
   camera.near=0.05;
   camera.updateProjectionMatrix();
 }
@@ -4011,50 +2474,13 @@ function tryPlaceBlock(){
      pz+0.5>player.pos.z-PW&&pz-0.5<player.pos.z+PW)return;
   if(blockMap.has(blockKey(px,py,pz)))return;
   addBlock(px,py,pz,btype);
-  window._bwPlayBlockSFX('place', btype);
   s.count--;if(s.count<=0){s.type=null;s.count=0;}
   if(gameMode==='multi'){sbRequest({action:'placeBlock',uid:myPeerId,x:px,y:py,z:pz,type:btype,team:player.team});}
   lastPlaceTime=Date.now();updateUI();_swingHand();
 }
 
-const _bwCrackMats=[];
-function _bwCrackMat(stage){
-  stage=Math.max(0,Math.min(9,stage|0));
-  if(_bwCrackMats[stage]) return _bwCrackMats[stage];
-  const c=document.createElement('canvas'); c.width=32; c.height=32;
-  const g=c.getContext('2d');
-  g.clearRect(0,0,32,32);
-  g.strokeStyle='rgba(20,20,20,'+(0.35+stage*0.07)+')';
-  g.lineWidth=1+stage*0.15;
-  g.beginPath();
-  const seeds=[[6,4,14,18],[18,3,22,20],[10,22,26,28],[4,16,16,30],[20,10,30,16]];
-  seeds.slice(0,2+Math.floor(stage/2)).forEach(([a,b,c2,d],i)=>{
-    g.moveTo(a,b); g.lineTo(c2+stage,d); g.moveTo(a+2,b+3); g.lineTo((a+c2)/2, (b+d)/2+stage);
-  });
-  g.stroke();
-  const tex=new THREE.CanvasTexture(c);
-  tex.magFilter=THREE.NearestFilter; tex.minFilter=THREE.NearestFilter;
-  const mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,side:THREE.DoubleSide});
-  _bwCrackMats[stage]=mat; return mat;
-}
-let _bwCrackMesh=null;
-function _bwShowCrack(tgt,ratio){
-  if(!scene||!tgt) return;
-  if(!_bwCrackMesh){
-    _bwCrackMesh=new THREE.Mesh(new THREE.BoxGeometry(1.02,1.02,1.02), _bwCrackMat(0));
-    _bwCrackMesh.renderOrder=8;
-    scene.add(_bwCrackMesh);
-  }
-  _bwCrackMesh.visible=true;
-  _bwCrackMesh.position.copy(tgt.position);
-  _bwCrackMesh.material=_bwCrackMat(Math.min(9,Math.floor(ratio*10)));
-}
-function _bwHideCrack(){
-  if(_bwCrackMesh) _bwCrackMesh.visible=false;
-}
 function mineBlock(dt){
   const prog=document.getElementById('break-progress');
-  if(prog) prog.style.display='none';
   const REACH=6.0; // 採掘リーチ（設置と同じ固定値）
   const eyePos=new THREE.Vector3(player.pos.x, player.pos.y+1.6, player.pos.z);
   const dir=new THREE.Vector3(0,0,-1).applyEuler(new THREE.Euler(controls.pitch,controls.yaw,0,'YXZ'));
@@ -4086,14 +2512,11 @@ function mineBlock(dt){
       if(s.type==='axe'&&(tgt.userData.type==='log'||tgt.userData.type==='wood'))mul*=3;
     }
     breakAcc+=dt*mul;
-    const hard=tgt.userData.hardness||1;
-    _bwShowCrack(tgt, Math.min(1,breakAcc/hard));
-    if(breakAcc>=hard){
+    document.getElementById('break-bar').style.width=(Math.min(1,breakAcc/(tgt.userData.hardness||1))*100)+'%';
+    if(breakAcc>=(tgt.userData.hardness||1)){
       if(tgt.userData.isBed){
-        window._bwPlaySFX('bedBreak');
         destroyBed(tgt);
       }else{
-        window._bwPlayBlockSFX('break', tgt.userData?.type);
         let drop=tgt.userData.type;
         // Wool drops as same team wool (normalized)
         if(drop&&drop.startsWith('wool_'))drop=woolKey(player.team);
@@ -4104,10 +2527,10 @@ function mineBlock(dt){
         spawnParticles(tgt.position.clone(),null,6);
         removeBlock(tgt);
       }
-      breakTarget=null;breakAcc=0;_bwHideCrack();
+      breakTarget=null;breakAcc=0;prog.style.display='none';
     }
   }else{
-    breakAcc=0;_bwHideCrack();
+    breakAcc=0;prog.style.display='none';
   }
 }
 
@@ -4203,8 +2626,8 @@ function updateAI(dt){
       ud.buyTimer=0;
       // ウールを最優先で確保（橋渡しを早く可能にする）
       if(ud.gold>=2&&!ud.hasWool){ud.hasWool=true;ud.gold-=2;ud.woolStock=12;}
-      if(ud.iron>=8&&!ud.hasSword){ud.hasSword=true;ud.iron-=8;ud.damage=Math.min(4,(ud.damage||2)+1);}
-      if(ud.gold>=7&&ud.hasSword&&!ud.hasIronSword){ud.hasIronSword=true;ud.gold-=7;ud.damage=Math.min(5,(ud.damage||2)+1);}
+      if(ud.iron>=8&&!ud.hasSword){ud.hasSword=true;ud.iron-=8;ud.damage=(ud.damage||3)+4;}
+      if(ud.gold>=7&&ud.hasSword&&!ud.hasIronSword){ud.hasIronSword=true;ud.gold-=7;ud.damage=(ud.damage||3)+3;}
       if(ud.iron>=6&&!ud.hasArmor){ud.hasArmor=true;ud.iron-=6;ud.maxHp=(ud.maxHp||20)+4;ud.hp=Math.min(ud.hp+4,ud.maxHp);}
       if(ud.iron>=8&&ud.hasArmor&&!ud.hasFullArmor){ud.hasFullArmor=true;ud.iron-=8;ud.maxHp=(ud.maxHp||20)+4;ud.hp=Math.min(ud.hp+4,ud.maxHp);}
       if(ud.emerald===undefined)ud.emerald=0;
@@ -4218,14 +2641,11 @@ function updateAI(dt){
       if(ud.hasWool&&ud.gold>=2){ud.gold-=2;ud.woolStock=(ud.woolStock||0)+8;}
     }
     // HP低下時に回復ポーションを自己使用（緊急回復）
-    // v26修正: 以前は毎フレーム2%の確率で発動しており(60fpsなら約1秒に1回)、
-    // 瀕死にした直後にすぐ回復されて「ダメージが入らない」ように感じられていた。
-    // 発動頻度とクールダウンを調整し、実際にダメージが有効に見えるようにする。
-    if(ud.hp<(ud.maxHp||20)*0.3&&ud.gold>=5&&!ud._usedPotion&&Math.random()<0.004){
+    if(ud.hp<(ud.maxHp||20)*0.3&&ud.gold>=5&&!ud._usedPotion&&Math.random()<0.02){
       ud._usedPotion=true;
       ud.hp=Math.min((ud.maxHp||20),ud.hp+6);
       ud.gold-=5;
-      setTimeout(()=>{ud._usedPotion=false;},35000);
+      setTimeout(()=>{ud._usedPotion=false;},20000);
     }
 
     // ================================================================
@@ -4322,9 +2742,6 @@ function updateAI(dt){
         }
       }
 
-      // v26追記: デバッグ可視化(AIの意図の矢印)用に、計算済みの移動目標を保存しておく
-      ud.moveTarget=moveTarget;
-
       if(moveTarget){
       const dir=new THREE.Vector3().subVectors(moveTarget,e.position);
       dir.y=0;
@@ -4350,28 +2767,36 @@ function updateAI(dt){
           }
         }
 
+        // 橋架け: raid中は毎フレーム判定（インターバル制限なし、設置頻度のみレート制限）
         if(ud.hasWool && (ud.woolStock===undefined || ud.woolStock>0)){
-          const placeRate = (ud.state==='raid'||ud.state==='chase') ? 0.08 : 0.28;
+          const placeRate = ud.state==='raid' ? 0.12 : 0.4;
           if(ud.bridgeTimer>placeRate){
-            const wool='wool_'+String(ud.team).toLowerCase();
+            const checkX=Math.round(e.position.x+dir.x*0.9);
+            const checkY=Math.round(e.position.y-1);
+            const checkZ=Math.round(e.position.z+dir.z*0.9);
+            const hasGroundAhead=blockMap.has(blockKey(checkX,checkY,checkZ));
+            // 現在の足元もチェック（落下中の緊急キャッチ）
             const footX=Math.round(e.position.x), footY=Math.round(e.position.y-1), footZ=Math.round(e.position.z);
-            const nx=Math.round(e.position.x+Math.sign(dir.x||0)), nz=Math.round(e.position.z+Math.sign(dir.z||0));
-            const spots=[
-              [footX,footY,footZ],
-              [nx,footY,footZ],[footX,footY,nz],[nx,footY,nz],
-              [Math.round(e.position.x+dir.x*2),footY,Math.round(e.position.z+dir.z*2)]
-            ];
-            let placed=false;
-            for(const [x,y,z] of spots){
-              if(blockMap.has(blockKey(x,y,z))) continue;
-              const supported=blockMap.has(blockKey(x,y-1,z))||blockMap.has(blockKey(x-1,y,z))||blockMap.has(blockKey(x+1,y,z))||blockMap.has(blockKey(x,y,z-1))||blockMap.has(blockKey(x,y,z+1))||(x===footX&&z===footZ);
-              if(!supported && ud.state!=='raid' && ud.state!=='chase') continue;
-              addBlock(x,y,z,wool,true);
-              if(ud.woolStock) ud.woolStock--;
-              placed=true;
-              break;
+            const hasGroundUnder=blockMap.has(blockKey(footX,footY,footZ));
+            const isFalling = ud.vel.y < -0.05 && !ud.onGround;
+
+            if(ud.state==='raid'&&(!hasGroundAhead||(!hasGroundUnder&&isFalling))){
+              ud.bridgeTimer=0;
+              // 落下中なら足元を最優先で埋める
+              if(!hasGroundUnder && isFalling && !blockMap.has(blockKey(footX,footY,footZ))){
+                if(_bwCanPlaceGrounded(footX,footY,footZ)){addBlock(footX,footY,footZ,'wool_'+ud.team.toLowerCase(),true);}
+                if(ud.woolStock)ud.woolStock--;
+              } else if(!hasGroundAhead && !blockMap.has(blockKey(checkX,checkY,checkZ))){
+                if(_bwCanPlaceGrounded(checkX,checkY,checkZ)){addBlock(checkX,checkY,checkZ,'wool_'+ud.team.toLowerCase(),true);}
+                if(ud.woolStock)ud.woolStock--;
+              }
+            } else if(ud.state!=='raid' && ud.state!=='combat' && !hasGroundAhead){
+              ud.bridgeTimer=0;
+              if(!blockMap.has(blockKey(checkX,checkY,checkZ))){
+                addBlock(checkX,checkY,checkZ,'wool_'+ud.team.toLowerCase(),true);
+                if(ud.woolStock)ud.woolStock--;
+              }
             }
-            if(placed||!blockMap.has(blockKey(footX,footY,footZ))) ud.bridgeTimer=0;
           }
         }
       }
@@ -4416,21 +2841,24 @@ function updateAI(dt){
       }
     }
 
-    if(ud.state==='combat'&&ud.atkTimer>0.95){
+    // 攻撃(combat) — 精度向上版: 発射時に距離を再検証、命中率アップ、間隔短縮
+    if(ud.state==='combat'&&ud.atkTimer>0.55){
       const currentDist=e.position.distanceTo(player.pos);
-      const ATTACK_REACH=3.6;
+      const ATTACK_REACH=3.4; // 実際の武器リーチと一致させ「攻撃しない」問題を解消
       if(currentDist<=ATTACK_REACH){
         ud.atkTimer=0;
         if(!ud.isGolem||ud.team!==player.team){
+          // ストレイフ(横移動回避、命中率を保ちつつ回避行動)
           if(ud.strafeT>1.2){
             ud.strafeT=0;
             const perp=new THREE.Vector3(Math.cos(e.rotation.y),0,-Math.sin(e.rotation.y));
             const sd=(Math.random()<0.5?1:-1)*0.25*dt/TICK;
             e.position.x+=perp.x*sd;e.position.z+=perp.z*sd;
           }
+          // クリティカル判定: プレイヤーが空中にいる時に狙いやすい
           const isCrit = player.vel && player.vel.y<-0.2;
-          const dmg=Math.max(1,(ud.damage||2)*(isCrit?1.25:1));
-          applyDamage(dmg,{fromAI:true});
+          const dmg=(ud.damage||3)*(isCrit?1.5:1);
+          applyDamage(dmg);
           // 攻撃モーション（腕を振る）
           const ra=e.getObjectByName('ra');
           if(ra){ra.rotation.x=-1.1;setTimeout(()=>{if(ra)ra.rotation.x=0;},150);}
@@ -4446,23 +2874,13 @@ function updateAI(dt){
 // ================================================================
 //  DAMAGE / DEATH / RESPAWN
 // ================================================================
-function applyDamage(amount,opt){
-  opt=opt||{};
-  if(!opt.fromNetwork && !opt.fromAI && player.respawnProtection>0)return;
-  if(player.isDead && !opt.fromNetwork && !opt.fromAI)return;
-  const def=player.upgrades?.protection?0.12:0;
-  const dealt=Math.max(0,amount*(1-def));
-  if(dealt<=0)return;
-  player.hp-=dealt;
+function applyDamage(amount){
+  if(player.respawnProtection>0)return; // Invulnerable during respawn protection
+  const def=player.upgrades.protection?0.12:0;
+  player.hp-=amount*(1-def);
   updateUI();shakeIntensity=.28;
   flashDamage();
-  window._bwLastHitDebug=`recv dmg=${dealt.toFixed(1)} hp=${player.hp.toFixed(1)} net=${!!opt.fromNetwork}`;
   if(player.hp<=0&&!player.isDead)die();
-}
-function applyNetworkDamage(amount,fromUid,type){
-  if(!amount || amount<=0) return;
-  if(player.spectatorMode && player.isDead) return;
-  applyDamage(amount,{fromNetwork:true,fromUid:fromUid,type:type});
 }
 // 奈落死: respawn無敵中でも確実に殺す（"落ちたまま戻れないバグ"の修正）
 function applyVoidDeath(){
@@ -4499,7 +2917,6 @@ let _deathCountdownInterval=null;
 
 function die(){
   player.isDead=true;
-  window._bwPlaySFX('death');
   if(activeMenu)toggleMenu(null);
 
   player.spectatorMode=true;
@@ -4508,7 +2925,7 @@ function die(){
   const sp=TEAM_SPAWN[player.team];
   if(sp) player.pos.set(sp.x,sp.y+10,sp.z);
 
-  _bwRequestPointerLock();
+  document.body.requestPointerLock();
 
   // カウントダウンUI開始
   const timerEl=_getDeathTimerEl();
@@ -4532,17 +2949,16 @@ function die(){
   if(!player.hasBed){
     setTimeout(()=>{
       _clearDeathTimer();
-      player.isDead=true;
-      player.spectatorMode=true;
-      announce(gameMode==='multi'?'👁 観戦モード (退出するまで継続)':'💀 ELIMINATED!','#55ffff');
+      player.spectatorMode=false;
+      announce('💀 ELIMINATED!','#ff0000');
       playerData.level=Math.max(1,~~(playerData.kills/5)+1);
-      localStorage.setItem('bw_data',JSON.stringify(playerData));
-      if(gameMode!=='multi'){
-        setTimeout(()=>location.reload(),3000);
+      bwStorage.set('bw_data',JSON.stringify(playerData));
+      if(gameMode==='multi'){
+        stopMultiplayerLoops();
+        sbRequest({action:'leave',uid:myPeerId});
+        setTimeout(()=>showEndScreen(null,false),3000);
       } else {
-        const timerEl=_getDeathTimerEl();
-        timerEl.style.display='block';
-        timerEl.innerHTML='<div style="font-size:22px;color:#55ffff">観戦中</div><div style="font-size:13px;color:#ccc">WASDで水平移動 / スペース上昇 / シフト下降</div>';
+        setTimeout(()=>location.reload(),3000);
       }
     },5000);
   }else{
@@ -4569,7 +2985,7 @@ function respawn(){
   player.pos.set(sp.x,sp.y,sp.z);
   player.vel.set(0,0,0);
   updateUI();
-  _bwRequestPointerLock();
+  document.body.requestPointerLock();
 }
 function announce(msg,color='#ff5555'){
   const el=document.getElementById('announcement');
@@ -4591,7 +3007,6 @@ function animate(){
 
   // v26追記: 影の投影範囲をプレイヤー周辺に追従させる
   if(window._bwUpdateSunShadowTarget && player?.pos) window._bwUpdateSunShadowTarget(player.pos.x,player.pos.z);
-  if(window._bwHitboxDebugEnabled) _bwUpdateHitboxDebug();
 
   if(!activeMenu&&(!player.isDead||player.spectatorMode)){
     physicsStep(dt);
@@ -4876,9 +3291,8 @@ function buyItem(t,a,ct,ca){
     if(res.count<=0){res.type=null;res.count=0;}
     addItem(giveType,a);
     announce(`✅ ${ITEM_LABEL[giveType]||giveType} x${a}`,'#55ff55');
-    window._bwPlaySFX('coin');
   }
-  else { window._bwPlaySFX('deny'); announce('❌ リソース不足！','#ff4444'); }
+  else announce('❌ リソース不足！','#ff4444');
 }
 function buyUpgrade(key,cost){
   const res=_findResource('dia');
@@ -4888,7 +3302,6 @@ function buyUpgrade(key,cost){
     player.upgrades[key]=true;updateUI();
     const [label,color]=_labelUpgradeBuff(key);
     announce(`⬆ ${label} 取得！`,'#55ffff');
-    window._bwPlaySFX('levelup');
     _renderPermanentBuffs();
   }
   else announce('❌ ダイヤ不足！','#ff4444');
@@ -4933,7 +3346,7 @@ function toggleMenu(menu){
   document.getElementById('win-upgrade').style.display=menu==='upgrade'?'block':'none';
   document.getElementById('win-inventory').style.display=menu==='inventory'?'block':'none';
   if(menu){document.exitPointerLock();if(menu==='inventory')renderInvOverlay();}
-  else if(!player.isDead)_bwRequestPointerLock();
+  else if(!player.isDead)document.body.requestPointerLock();
   if(typeof _syncRTAWithMenu==='function') _syncRTAWithMenu();
 }
 
@@ -5055,8 +3468,9 @@ function renderInvOverlay(){
   document.getElementById('inv-bed').textContent=player.hasBed?'✓ あり':'✗ なし';
   document.getElementById('inv-bed').style.color=player.hasBed?'#55ff55':'#ff5555';
 
+  // ---- 防具スロット ----
   const armorCol=document.getElementById('inv-armor-col');
-  if(armorCol){ armorCol.style.display='none'; armorCol.innerHTML=''; }
+  armorCol.innerHTML='';
   ARMOR_SLOTS_DEF.forEach(def=>{
     const wrap=document.createElement('div');
     wrap.style.cssText='display:flex;align-items:center;gap:4px;margin-bottom:3px';
@@ -5143,7 +3557,7 @@ function renderInvOverlay(){
       const row=document.createElement('div');
       row.style.cssText='display:flex;align-items:center;gap:8px;padding:3px;font-size:12px';
       const tc=TEAM_COLOR_HEX[p.team]||'#fff';
-      row.innerHTML='<span style="color:'+bwSafeColor(tc,'#fff')+';font-weight:bold">'+bwEscapeHTML(p.name)+'</span>'+
+      row.innerHTML='<span style="color:'+tc+';font-weight:bold">'+_bwEscapeHtml(p.name)+'</span>'+
         '<span style="color:#ff5555">❤'+Math.ceil(p.hp||0)+'</span>'+
         '<span style="color:#55ff55">'+(p.bed?'🛏あり':'💔なし')+'</span>';
       teamSection.appendChild(row);
@@ -5293,6 +3707,7 @@ document.addEventListener('keyup',e=>{
 //  MP MESH v7: 頭上ネームプレート(名前+HP数字)・スキン対応
 // ================================================================
 function getOrCreateMPMesh(uid,color,name,skinUrl){
+  skinUrl=_bwSafeImageSource(skinUrl);
   if(mpMeshes[uid]){
     // v26修正: 後からskinUrlが届いた/変わった場合は正しいスキンで作り直す
     if(skinUrl && mpMeshes[uid].userData.skinUrl!==skinUrl){
@@ -5321,6 +3736,8 @@ function getOrCreateMPMesh(uid,color,name,skinUrl){
 // (以前の applyMPSkin は生のスキン画像をパーツごとの事前クロップ済み
 //  マテリアルへ丸ごと上書きしていたため、UVが合わず正しく表示できなかった)
 function _rebuildMPMeshSkin(uid,color,name,skinUrl){
+  const safe=_bwSafeImageSource(skinUrl);
+  if(!safe) return;
   const img=new Image();
   img.crossOrigin='anonymous';
   img.onload=()=>{
@@ -5331,14 +3748,14 @@ function _rebuildMPMeshSkin(uid,color,name,skinUrl){
       const pos=old.position.clone(), rot=old.rotation.clone();
       if(old.parent) old.parent.remove(old);
       const g=createSimplePlayerMesh(color||0x8888ff, img);
-      g.userData={isMPPlayer:true, uid, name, skinUrl, hp};
+      g.userData={isMPPlayer:true, uid, name, skinUrl:safe, hp};
       g.position.copy(pos); g.rotation.copy(rot);
       scene.add(g);
       mpMeshes[uid]=g;
     }catch(e){}
   };
   img.onerror=()=>{ /* 読み込み失敗時は仮メッシュのまま維持 */ };
-  img.src=skinUrl;
+  img.src=safe;
 }
 
 // 頭上ネームプレート更新（名前+HP数字）
@@ -5366,7 +3783,7 @@ function updateMPNameplates(){
     const tc = TEAM_COLOR_HEX[p.team]||'#fff';
     const hpNum = Math.ceil(p.hp||0);
     el.style.cssText = `position:fixed;left:${x}px;top:${y}px;transform:translate(-50%,-100%);pointer-events:none;z-index:60;text-align:center;white-space:nowrap`;
-    el.innerHTML = `<div style="background:rgba(0,0,0,0.7);padding:1px 5px;border-radius:2px;font-size:11px;color:${bwSafeColor(tc,'#fff')};text-shadow:1px 1px 0 #000">${bwEscapeHTML(p.name)}</div>`+
+    el.innerHTML = `<div style="background:rgba(0,0,0,0.7);padding:1px 5px;border-radius:2px;font-size:11px;color:${tc};text-shadow:1px 1px 0 #000">${_bwEscapeHtml(p.name)}</div>`+
                    `<div style="background:rgba(0,0,0,0.5);padding:1px 4px;border-radius:2px;font-size:10px;color:#ff5555">❤${hpNum}</div>`;
     document.body.appendChild(el);
   });
@@ -5385,21 +3802,28 @@ function startSupabaseLobbyRealtime(){
 // === v22: リモートプレイヤー状態の視覚反映 ===
 function _applyMPVisualState(p,mesh){
   if(!p||!mesh) return;
-  mesh.rotation.y=Number.isFinite(p.yaw)?p.yaw:mesh.rotation.y;
-  mesh.userData.pitch=Number.isFinite(p.pitch)?p.pitch:0;
-  mesh.userData.headYaw=Number.isFinite(p.headYaw)?p.headYaw:mesh.userData.headYaw||0;
-  mesh.userData.headPitch=Number.isFinite(p.headPitch)?p.headPitch:mesh.userData.headPitch||0;
+  mesh.userData.team=p.team||mesh.userData.team||'';
+  mesh.userData.name=p.name||mesh.userData.name||'';
+  mesh.userData.hp=Number.isFinite(+p.hp)?+p.hp:mesh.userData.hp;
+  mesh.rotation.y=Number.isFinite(+p.yaw)?+p.yaw:mesh.rotation.y;
+  mesh.userData.pitch=Number.isFinite(+p.pitch)?+p.pitch:0;
+  mesh.userData.headYaw=Number.isFinite(+p.headYaw)?+p.headYaw:(mesh.userData.headYaw||0);
+  mesh.userData.headPitch=Number.isFinite(+p.headPitch)?+p.headPitch:(mesh.userData.headPitch||0);
   mesh.userData.isSneaking=!!p.isSneaking;
   mesh.userData.isSprinting=!!p.isSprinting;
   mesh.userData.isJumping=!!p.isJumping;
   mesh.userData.heldItem=p.heldItem||'';
-  mesh.userData.heldItemCount=p.heldItemCount||0;
+  mesh.userData.heldItemCount=+p.heldItemCount||0;
   mesh.userData.actionAnimation=p.actionAnimation||'';
-  mesh.userData.attackAnimationUntil=p.attackAnimationUntil||0;
-  _bwApplyHeadLook(mesh, Number.isFinite(p.yaw)?p.yaw:mesh.rotation.y, Number.isFinite(p.headPitch)?p.headPitch:(p.pitch||0));
+  mesh.userData.attackAnimationUntil=+p.attackAnimationUntil||0;
+  const head=mesh.getObjectByName('head');
+  if(head){
+    head.rotation.y=Number.isFinite(+p.headYaw)?(+p.headYaw-mesh.rotation.y):head.rotation.y;
+    head.rotation.x=Number.isFinite(+p.headPitch)?(+p.headPitch):head.rotation.x;
+  }
   const ra=mesh.getObjectByName('ra'),la=mesh.getObjectByName('la');
   if(ra&&p.attackAnimationUntil>Date.now()) ra.rotation.x=-1.1;
-  if(la&&p.attackAnimationUntil>Date.now()) la.rotation.x=-1.1;
+  if(la&&p.attackAnimationUntil>Date.now()) la.rotation.x=-0.8;
   if(p.heldItem) _updateMPHeldItem(mesh,p.heldItem);
 }
 function _updateMPHeldItem(mesh,type){
@@ -5455,11 +3879,45 @@ window.addEventListener('bw:blocks',e=>{
 window.addEventListener('bw:beds',e=>{const r=e.detail?.new||e.detail?.record;if(r?.team&&r.has_bed===false){TEAM_BED_STATUS[r.team]=false;updateScoreboard();}});
 window.addEventListener('bw:chat',e=>{const r=e.detail?.new||e.detail?.record;if(!r||r.uid===myPeerId)return;if(r.scope==='team'&&r.team!==player.team)return;if(r.scope==='battle'&&r.team&&r.team!==player.team)return;showInGameChat(r.name,r.msg,false);});
 
+
+window._bwApplyRemoteDamageEvent=function(r,source){
+  if(!r || r.to_uid!==myPeerId) return false;
+  const id=String(r.id||'');
+  if(id && window._bwDamageSeen.has(id)) return false;
+  if(id){
+    window._bwDamageSeen.add(id);
+    setTimeout(()=>window._bwDamageSeen.delete(id),30000);
+  }
+  const amount=Number(r.amount)||0;
+  if(amount<=0) return false;
+  window._bwLastHitDebug=`damage受信 from=${String(r.from_uid||'').slice(0,8)} amount=${amount.toFixed(1)} via=${source||'unknown'}`;
+  applyDamage(amount);
+  return true;
+};
+
+window._bwDamageSeen = window._bwDamageSeen || new Set();
+window.addEventListener('bw:damage',e=>{
+  const r=e.detail?.new||e.detail?.record;
+  window._bwApplyRemoteDamageEvent(r,'realtime');
+});
+
+function stopMultiplayerLoops(){
+  window._bwMultiplayerStopped=true;
+  [mpSyncInterval, ...(window._bwMultiplayerIntervals||[])].forEach(id=>{ if(id) clearInterval(id); });
+  mpSyncInterval=null;
+  window._bwMultiplayerIntervals=[];
+  try{ if(typeof stopSupabaseRealtime==='function') stopSupabaseRealtime(); }catch(e){}
+  try{
+    if(window.__v22DropChannel && window.supabaseClient) window.supabaseClient.removeChannel(window.__v22DropChannel);
+  }catch(e){}
+  window.__v22DropChannel=null;
+}
+
 async function startMultiplayer(){
-  const currentSkin=skinUrl||playerSkin||localStorage.getItem('bw_skin')||'';
+  window._bwMultiplayerStopped=false;
+  const currentSkin=_bwSafeImageSource(skinUrl||playerSkin||bwStorage.get('bw_skin'))||'';
   await sbRequest({action:'join',uid:myPeerId,name:player.name,team:player.team,skin:currentSkin});
   startSupabaseRealtime();
-  _bwStartDamageRealtime();
   if(typeof _v22StartDropRealtime==='function') _v22StartDropRealtime();
 
   // Supabase の bw_settings から通信速度を取得してから各ループを起動
@@ -5499,7 +3957,7 @@ async function startMultiplayer(){
           sp.style.borderColor=tc;
           const hp=Math.ceil(p.hp||0);
           const bedIcon=p.bed===0?'💔':'🛏';
-          sp.innerHTML=`<span style="color:${bwSafeColor(tc,'#fff')};font-weight:bold">${bwEscapeHTML(p.name)}</span> <span style="color:#ff5555">❤${hp}</span> ${bedIcon}`;
+          sp.innerHTML=`<span style="color:${tc};font-weight:bold">${_bwEscapeHtml(p.name)}</span> <span style="color:#ff5555">❤${hp}</span> ${bedIcon}`;
           pDiv.appendChild(sp);
         });
         const stEl=document.getElementById('mp-status');
@@ -5510,6 +3968,7 @@ async function startMultiplayer(){
     window._lastMPVisualUpdate=performance.now();
 
     mpSyncInterval=setInterval(async()=>{
+      if(window._bwMultiplayerStopped) return;
       // 1ブロック単位（整数）に丸める
       const rx=Math.round(player.pos.x), ry=Math.round(player.pos.y), rz=Math.round(player.pos.z);
       const rhp=Math.ceil(player.hp), rbed=player.hasBed?1:0;
@@ -5595,21 +4054,21 @@ async function startMultiplayer(){
 
     // ④ ダメージ受信（ダメージ種別付き）
     const dmgInterval=setInterval(async()=>{
-      if(player.spectatorMode && player.isDead) return;
-      window._bwDmgDebug.pollCount++;
-      window._bwDmgDebug.lastPollAt=Date.now();
+      if(player.isDead||player.spectatorMode) return;
       const res=await sbRequest({action:'getDamage',matchId:currentMatchId,uid:myPeerId});
-      if(!res||!res.ok){
-        window._bwDmgDebug.pollFail++;
-        window._bwDmgDebug.lastPollErr=(res&&res.error)||'null応答';
-        console.error('[BW damage受信失敗]',window._bwDmgDebug.lastPollErr,{matchId:currentMatchId,uid:myPeerId});
-        return;
+      if(res&&res.ok&&Array.isArray(res.events)){
+        let pending=0;
+        res.events.forEach(ev=>{
+          const id=String(ev.id||'');
+          if(id && window._bwDamageSeen.has(id)) return;
+          if(id){window._bwDamageSeen.add(id);setTimeout(()=>window._bwDamageSeen.delete(id),30000);}
+          pending += Number(ev.amount)||0;
+        });
+        if(pending>0) applyDamage(pending);
+      }else if(res&&res.ok&&res.damage>0){
+        applyDamage(res.damage);
       }
-      if(res.damage>0){
-        window._bwDmgDebug.received++;
-        applyNetworkDamage(res.damage,res.events?.[0]?.from,res.events?.[0]?.type);
-      }
-    }, Math.min(dmgMs||500,280));
+    }, dmgMs);
 
     // ⑤ チャット受信（scope完全分離・連鎖防止）
     const _chatSeenTs=new Set(); // 表示済みtsを管理
@@ -5648,14 +4107,12 @@ async function startMultiplayer(){
       });
     }, chatMs);
 
+    window._bwMultiplayerIntervals=[blockSyncInterval,bedSyncInterval,dmgInterval,chatSyncInterval];
+
     // クリーンアップ
     window.addEventListener('beforeunload',()=>{
-      sbRequest({action:'leave',uid:myPeerId});
-      clearInterval(mpSyncInterval);
-      clearInterval(blockSyncInterval);
-      clearInterval(bedSyncInterval);
-      clearInterval(dmgInterval);
-      clearInterval(chatSyncInterval);
+      try{ sbRequest({action:'leave',uid:myPeerId}); }catch(e){}
+      stopMultiplayerLoops();
     });
   });
 }
@@ -5672,7 +4129,7 @@ function showInGameChat(name,msg,isOwn=false){
   const div=document.createElement('div');
   div.className='chat-msg';
   const teamColor=isOwn?'#ffff88':'#ffffff';
-  div.innerHTML=`<span style="color:${teamColor};font-weight:bold">${bwEscapeHTML(name)}:</span> ${bwEscapeHTML(msg)}`;
+  div.innerHTML=`<span style="color:${teamColor};font-weight:bold">${_bwEscapeHtml(name)}:</span> ${_bwEscapeHtml(msg)}`;
   overlay.appendChild(div);
   overlay.style.display='block';
   // 最大10件まで
@@ -5718,7 +4175,7 @@ async function sendChat(){
   // Supabase v9スコープ別送信
   const gasScope=scope==='lobby'?'lobby':scope==='team'?'battle':scope==='post'?'post':'battle';
   await sbRequest({action:'postMsg',name:player.name,msg:displayMsg,color,pcId:myPeerId,
-    scope:gasScope,team:(scope==='team')?player.team:''});
+    matchId:gasScope==='lobby'?null:currentMatchId,scope:gasScope,team:(scope==='team')?player.team:''});
   showInGameChat(player.name+'(自)', displayMsg, true);
 }
 
@@ -5726,15 +4183,12 @@ function openChatInput(scope='all'){
   _chatScope=scope;
   const box=document.getElementById('chat-input-box');
   const label=document.getElementById('chat-scope-label');
-  const overlay=document.getElementById('chat-overlay');
   const scopeText={all:'全体へ',team:'チームへ',lobby:'ロビーへ'};
   if(label) label.textContent=scopeText[scope]||'全体へ';
   if(!box) return;
   box.style.display='block';
-  if(overlay) overlay.style.display='block';
   const input=document.getElementById('chat-input');
   if(input){input.value='';input.focus();}
-  if(gameMode==='multi' && typeof _bwLoadBattleChatHistory==='function') _bwLoadBattleChatHistory();
 }
 function closeChatInput(){
   const box=document.getElementById('chat-input-box');
@@ -5755,66 +4209,62 @@ const SB_PLAYER_TTL_SEC=15;
 function _sbNowIso(){ return new Date().toISOString(); }
 function _sbActiveSince(sec){ return new Date(Date.now()-sec*1000).toISOString(); }
 
-function _bwSeasonParts(date){
-  const d=date||new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Tokyo'}));
-  const m=d.getMonth()+1, y=d.getFullYear();
-  if(m===12) return {id:y+'-winter',label:y+'冬'};
-  if(m<=2) return {id:(y-1)+'-winter',label:(y-1)+'冬'};
-  if(m<=5) return {id:y+'-spring',label:y+'春'};
-  if(m<=8) return {id:y+'-summer',label:y+'夏'};
-  return {id:y+'-autumn',label:y+'秋'};
-}
-function _bwSeasonId(){ return _bwSeasonParts().id; }
-function _bwSeasonLabel(){ return '日本時間 '+_bwSeasonParts().label+'シーズン'; }
 async function sbRequest(data){
   if(!window.supabaseClient){
-    _supabaseLastError='Supabaseクライアント未初期化（SUPABASE_URL/KEYを確認してください）';
-    _setSupabaseStatus('Supabase: 未初期化','#ff5555');
-    _showSupabaseErrorBanner(_supabaseLastError); return null;
+    _supabaseLastError=null;
+    _setSupabaseStatus('Supabase: オフライン','#888');
+    _hideSupabaseErrorBanner();
+    return null;
   }
-  const _gm=(typeof window!=='undefined' && window.gameMode!=null)?window.gameMode:gameMode;
-  if(_gm==='training_bridge'||_gm==='training_parkour') return {ok:true,local:true};
+  if(gameMode==='training_bridge'||gameMode==='training_parkour') return {ok:true,local:true};
+  if(window.__BW_AUTH_READY){ try{ await window.__BW_AUTH_READY; }catch(e){} }
   const sb=window.supabaseClient;
   const d={...data};
-  const matchActions=['join','sync','pollPlayers','placeBlock','getBlocks','destroyBlock','clearBlocks','bedDestroyed','getBeds','clearBeds','damage','getDamage','clearDamage'];
+  const localUid=window.__BW_LOCAL_PEER_ID;
+  if(localUid && localUid!==myPeerId){
+    ['uid','from','pcId'].forEach(key=>{ if(d[key]===localUid) d[key]=myPeerId; });
+  }
+  const matchActions=['join','sync','pollPlayers','placeBlock','getBlocks','destroyBlock','clearBlocks','clearMatch','bedDestroyed','getBeds','clearBeds','damage','getDamage','clearDamage','actionEvent'];
   if(matchActions.includes(d.action) && currentMatchId) d.matchId=currentMatchId;
   try{
     let result=null;
     switch(d.action){
       case 'lobbyJoin': {
-        const {data:r,error}=await sb.rpc('bw_claim_lobby_host',{p_lobby_id:'main',p_uid:d.uid,p_name:d.name||'Player'});
+        const {error}=await sb.rpc('bw_claim_lobby_host',{p_lobby_id:'main',p_name:String(d.name||'Player').slice(0,64)});
         if(error) throw error;
         result=await _sbLobbyPoll(sb,d); break;
       }
       case 'lobbyPoll': {
-        const {error}=await sb.from('bw_lobby').update({last_seen:_sbNowIso()}).eq('lobby_id','main').eq('uid',d.uid); if(error) throw error;
-        await sb.rpc('bw_reassign_lobby_host',{p_lobby_id:'main'});
+        const {error}=await sb.rpc('bw_lobby_poll',{p_lobby_id:'main'}); if(error) throw error;
         result=await _sbLobbyPoll(sb,d); break;
       }
       case 'lobbySpectator': {
-        const {error}=await sb.from('bw_lobby').update({is_spectator:true,last_seen:_sbNowIso()}).eq('lobby_id','main').eq('uid',d.uid); if(error) throw error; result={ok:true}; break;
+        const {error}=await sb.rpc('bw_lobby_spectator',{p_lobby_id:'main'}); if(error) throw error; result={ok:true}; break;
       }
       case 'startGame': {
-        const {data:hostRow,error:he}=await sb.from('bw_lobby').select('*').eq('lobby_id','main').eq('uid',d.uid).eq('is_host',true).maybeSingle(); if(he) throw he;
-        if(!hostRow){ result={ok:false,error:'host_required'}; break; }
-        const matchId='match_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
-        const seed=Math.floor(Math.random()*2147483647);
-        const {error:me}=await sb.from('bw_matches').insert({match_id:matchId,lobby_id:'main',host_uid:d.uid,status:'running',team_mode:d.teamMode||2,map_theme:d.mapTheme||'grassland',map_seed:seed,map_version:2,started_at:_sbNowIso()}); if(me) throw me;
-        const {error:le}=await sb.from('bw_lobby').update({team_mode:d.teamMode||2,game_started:true,assignments:d.assignments||{},map_theme:d.mapTheme||'grassland',match_id:matchId}).eq('lobby_id','main'); if(le) throw le;
+        const {data:startData,error:he}=await sb.rpc('bw_start_match',{
+          p_lobby_id:'main',
+          p_team_mode:d.teamMode||2,
+          p_map_theme:d.mapTheme||'grassland',
+          p_assignments:d.assignments||{}
+        });
+        if(he) throw he;
+        const matchId=startData?.matchId;
+        const seed=Number(startData?.mapSeed)||0;
+        if(!matchId){ result={ok:false,error:'match_create_failed'}; break; }
         currentMatchId=matchId; currentMapSeed=seed; window.dispatchEvent(new CustomEvent('bw:match-ready',{detail:{matchId}})); result={ok:true,matchId,mapSeed:seed}; break;
       }
       case 'lobbyLeave': {
-        const {error:le}=await sb.from('bw_lobby').delete().eq('lobby_id','main').eq('uid',d.uid); if(le) throw le;
-        const {error:re}=await sb.rpc('bw_reassign_lobby_host',{p_lobby_id:'main'}); if(re) throw re;
+        const {error}=await sb.rpc('bw_leave_lobby',{p_lobby_id:'main'}); if(error) throw error;
         result={ok:true}; break;
       }
-      case 'setTeamMode': { const {error}=await sb.from('bw_lobby').update({team_mode:d.mode}).eq('lobby_id','main').eq('uid',d.uid).eq('is_host',true); if(error) throw error; result={ok:true}; break; }
+      case 'setTeamMode': { const {error}=await sb.rpc('bw_set_team_mode',{p_lobby_id:'main',p_mode:d.mode}); if(error) throw error; result={ok:true}; break; }
       case 'join': {
         if(!d.matchId) { result={ok:false,error:'match_required'}; break; }
-        const {error:je}=await sb.from('bw_players').upsert({match_id:d.matchId,uid:d.uid,name:d.name||'P',team:d.team||'Blue',x:0,y:65,z:0,hp:20,max_hp:20,bed:true,alive:true,state:'normal',is_sneaking:false,is_sprinting:false,is_jumping:false,kills:0,last_seen:_sbNowIso(),skin:d.skin||''},{onConflict:'match_id,uid'}); if(je) throw je; result={ok:true}; break;
+        const {error:je}=await sb.from('bw_players').upsert({match_id:d.matchId,uid:d.uid,name:String(d.name||'P').slice(0,64),team:d.team||'Blue',x:0,y:65,z:0,hp:20,max_hp:20,bed:true,alive:true,state:'normal',is_sneaking:false,is_sprinting:false,is_jumping:false,kills:0,last_seen:_sbNowIso(),skin:d.skin||''},{onConflict:'match_id,uid'}); if(je) throw je; result={ok:true}; break;
       }
       case 'sync': {
-        const upd={match_id:d.matchId,uid:d.uid,name:d.name||'P',team:d.team||'Blue',x:d.x??0,y:d.y??65,z:d.z??0,hp:d.hp??20,max_hp:d.maxHp??20,bed:!!d.bed,last_seen:_sbNowIso(),
+        const upd={match_id:d.matchId,uid:d.uid,name:String(d.name||'P').slice(0,64),team:d.team||'Blue',x:d.x??0,y:d.y??65,z:d.z??0,hp:d.hp??20,max_hp:d.maxHp??20,bed:!!d.bed,last_seen:_sbNowIso(),
           yaw:d.yaw??0,pitch:d.pitch??0,head_yaw:d.headYaw??(d.yaw??0),head_pitch:d.headPitch??(d.pitch??0),
           is_sneaking:!!d.isSneaking,is_sprinting:!!d.isSprinting,is_jumping:!!d.isJumping,is_falling:!!d.isFalling,
           state:d.state||'normal',kills:d.kills??0,held_item:d.heldItem||'',held_item_count:d.heldItemCount??0,
@@ -5826,7 +4276,16 @@ async function sbRequest(data){
         result=await _getMatchPlayers(sb,d.matchId); break;
       }
       case 'pollPlayers': result=await _getMatchPlayers(sb,d.matchId); break;
-      case 'leave': { if(d.matchId){ const {error:pe}=await sb.from('bw_players').delete().eq('match_id',d.matchId).eq('uid',d.uid); if(pe) throw pe; } const {error:le}=await sb.from('bw_lobby').delete().eq('lobby_id','main').eq('uid',d.uid); if(le) throw le; result={ok:true}; break; }
+      case 'leave': {
+        if(d.matchId){ const {error:pe}=await sb.from('bw_players').delete().eq('match_id',d.matchId).eq('uid',d.uid); if(pe) throw pe; }
+        const {error:le}=await sb.rpc('bw_leave_lobby',{p_lobby_id:'main'}); if(le) throw le;
+        result={ok:true}; break;
+      }
+      case 'clearMatch': {
+        if(!d.matchId){ result={ok:false,error:'match_required'}; break; }
+        const {data,error}=await sb.rpc('bw_clear_match',{p_match_id:d.matchId}); if(error) throw error;
+        result={ok:!!data}; break;
+      }
       case 'placeBlock': { const rx=Math.round(d.x),ry=Math.round(d.y),rz=Math.round(d.z); const {error:be}=await sb.from('bw_blocks').upsert({match_id:d.matchId,x:rx,y:ry,z:rz,type:d.type||'',team:d.team||'',uid:d.uid||'',action:'place',ts:_sbNowIso()},{onConflict:'match_id,x,y,z'}); if(be) throw be; result={ok:true}; break; }
       case 'getBlocks': { const {data:rows,error}=await sb.from('bw_blocks').select('*').eq('match_id',d.matchId); if(error) throw error; result={ok:true,blocks:(rows||[]).map(r=>({x:+r.x,y:+r.y,z:+r.z,type:r.type,team:r.team,uid:r.uid,action:r.action})),count:(rows||[]).length}; break; }
       case 'destroyBlock': { const rx=Math.round(d.x),ry=Math.round(d.y),rz=Math.round(d.z); const {error:be}=await sb.from('bw_blocks').upsert({match_id:d.matchId,x:rx,y:ry,z:rz,type:'',team:d.team||'',uid:d.uid||'',action:'break',ts:_sbNowIso()},{onConflict:'match_id,x,y,z'}); if(be) throw be; result={ok:true}; break; }
@@ -5834,7 +4293,7 @@ async function sbRequest(data){
       case 'bedDestroyed': { const {error:be}=await sb.from('bw_beds').upsert({match_id:d.matchId,team:d.team,has_bed:false,destroyed_by:d.destroyedBy||'',uid:d.uid||'',destroyed_at:_sbNowIso(),ts:_sbNowIso()},{onConflict:'match_id,team'}); if(be) throw be; result={ok:true,team:d.team,hasBed:false}; break; }
       case 'getBeds': { const {data:rows,error}=await sb.from('bw_beds').select('*').eq('match_id',d.matchId).eq('has_bed',false); if(error) throw error; result={ok:true,destroyed:(rows||[]).map(r=>({team:r.team,destroyedBy:r.destroyed_by})),count:(rows||[]).length}; break; }
       case 'clearBeds': { const {error:be}=await sb.from('bw_beds').delete().eq('match_id',d.matchId); if(be) throw be; result={ok:true}; break; }
-      case 'postMsg': { const {error:ce}=await sb.from('bw_chat').insert({lobby_id:'main',match_id:d.matchId||null,scope:d.scope||'battle',team:d.team||'',uid:d.uid||d.pcId||'',name:d.name||'Player',msg:(d.msg||'').substring(0,300),color:d.color||'#ffffff',pc_id:d.pcId||'',ts:_sbNowIso()}); if(ce) throw ce; result={ok:true}; break; }
+      case 'postMsg': { const {error:ce}=await sb.from('bw_chat').insert({lobby_id:'main',match_id:d.matchId||null,scope:d.scope||'battle',team:d.team||'',uid:d.uid||d.pcId||'',name:String(d.name||'Player').slice(0,64),msg:String(d.msg||'').slice(0,300),color:d.color||'#ffffff',pc_id:d.pcId||'',ts:_sbNowIso()}); if(ce) throw ce; result={ok:true}; break; }
       case 'getMsgs': { let q=sb.from('bw_chat').select('*').eq('lobby_id','main').eq('scope',d.scope||'battle').order('ts',{ascending:true}).limit(80); q=d.scope==='lobby'?q.is('match_id',null):d.matchId?q.eq('match_id',d.matchId):q; const {data:rows,error}=await q; if(error) throw error; result={ok:true,msgs:(rows||[]).map(r=>({ts:r.ts,name:r.name,msg:r.msg,color:r.color,pcId:r.pc_id,scope:r.scope,team:r.team||''})),count:(rows||[]).length}; break; }
       case 'clearBattleChat': { let q=sb.from('bw_chat').delete().eq('lobby_id','main'); if(d.matchId) q=q.eq('match_id',d.matchId); else q=q.in('scope',['battle','post']); await q; result={ok:true}; break; }
       case 'damage': { const {error:de}=await sb.from('bw_damage').insert({match_id:d.matchId,to_uid:d.to,from_uid:d.from,amount:+d.amount||0,type:d.type||'melee',ts:_sbNowIso()}); if(de) throw de; result={ok:true}; break; }
@@ -5844,164 +4303,25 @@ async function sbRequest(data){
         if(rows?.length){
           await Promise.all(rows.map(r=>sb.from('bw_damage').delete().eq('id',r.id)));
         }
-        result={ok:true,damage:(rows||[]).reduce((a,r)=>a+(+r.amount||0),0),events:(rows||[]).map(r=>({from:r.from_uid,amount:+r.amount,type:r.type}))};
+        result={ok:true,damage:(rows||[]).reduce((a,r)=>a+(+r.amount||0),0),events:(rows||[]).map(r=>({id:r.id,from:r.from_uid,amount:+r.amount,type:r.type}))};
         break;
       }
       case 'clearDamage': { const {error:de}=await sb.from('bw_damage').delete().eq('match_id',d.matchId); if(de) throw de; result={ok:true}; break; }
       case 'actionEvent': { const {error:ae}=await sb.from('bw_action_events').insert({match_id:d.matchId,uid:d.uid,action_type:d.actionType||'action',item_type:d.itemType||'',x:d.x??null,y:d.y??null,z:d.z??null,yaw:d.yaw??null,pitch:d.pitch??null,payload:d.payload||{},created_at:_sbNowIso()}); if(ae) throw ae; result={ok:true}; break; }
-      case 'updateHistory': { const payload={uid:d.uid,name:d.name||'Player',kills:d.kills||0,wins:d.wins||0,level:d.level||1,skin:d.skin||'',last_match_id:d.matchId||null,last_seen:_sbNowIso()}; const {data:e}=await sb.from('bw_history').select('*').eq('uid',d.uid).maybeSingle(); if(e) payload.kills=(e.kills||0)+(d.kills||0),payload.wins=(e.wins||0)+(d.wins||0),payload.level=d.level||e.level||1; const {error:he2}=await sb.from('bw_history').upsert(payload,{onConflict:'uid'}); if(he2) throw he2; result={ok:true}; break; }
+      case 'updateHistory': {
+        const {data:e,error:ee}=await sb.from('bw_history').select('*').eq('uid',d.uid).maybeSingle(); if(ee) throw ee;
+        const cap=(value,max)=>Math.min(max,Math.max(0,Math.floor(Number(value)||0)));
+        const kills=Math.max(cap(e?.kills,10000000),cap(d.kills,10000000));
+        const wins=Math.max(cap(e?.wins,1000000),cap(d.wins,1000000));
+        const level=Math.max(1,Math.min(100000,Math.floor(Number(d.level)||Number(e?.level)||1)));
+        const skin=_bwSafeImageSource(d.skin)||e?.skin||'';
+        const payload={uid:d.uid,name:String(d.name||'Player').slice(0,64),kills,wins,level,skin,last_match_id:d.matchId||null,last_seen:_sbNowIso()};
+        const {error:he2}=await sb.from('bw_history').upsert(payload,{onConflict:'uid'}); if(he2) throw he2; result={ok:true}; break;
+      }
       case 'getHistory': { const {data:rows,error}=await sb.from('bw_history').select('*').order('kills',{ascending:false}).limit(50); if(error) throw error; result={ok:true,history:(rows||[]).map(r=>({uid:r.uid,name:r.name,kills:r.kills||0,wins:r.wins||0,level:r.level||1,skin:r.skin||''})),count:(rows||[]).length}; break; }
-      case 'updateSeason': {
-        const sid=_bwSeasonId();
-        const {data:e}=await sb.from('bw_season_stats').select('*').eq('season_id',sid).eq('uid',d.uid).maybeSingle();
-        const payload={season_id:sid,uid:d.uid,name:d.name||'Player',kills:(e?.kills||0)+(d.kills||0),wins:(e?.wins||0)+(d.wins||0),updated_at:_sbNowIso()};
-        const {error:se}=await sb.from('bw_season_stats').upsert(payload,{onConflict:'season_id,uid'});
-        if(se && !/does not exist|schema cache/i.test(se.message||'')) throw se;
-        result={ok:!se}; break;
-      }
-      case 'getSeasonHistory': {
-        const sid=_bwSeasonId();
-        const {data:rows,error}=await sb.from('bw_season_stats').select('*').eq('season_id',sid).order('kills',{ascending:false}).limit(50);
-        if(error && !/does not exist|schema cache/i.test(error.message||'')) throw error;
-        result={ok:true,seasonId:sid,seasonLabel:_bwSeasonLabel(),history:(rows||[]).map(r=>({uid:r.uid,name:r.name,kills:r.kills||0,wins:r.wins||0}))}; break;
-      }
-      case 'queueJoin': {
-        const row={uid:d.uid,name:d.name||'Player',level:d.level||1,mode:d.mode||'open',code:d.code||'',target_uid:d.targetUid||'',status:'waiting',last_seen:_sbNowIso()};
-        const {error:qe}=await sb.from('bw_queue').upsert(row,{onConflict:'uid'});
-        if(qe) throw qe; result={ok:true}; break;
-      }
-      case 'queueLeave': {
-        const {error:qe}=await sb.from('bw_queue').delete().eq('uid',d.uid); if(qe) throw qe; result={ok:true}; break;
-      }
-      case 'queueList': {
-        const since=_sbActiveSince(40);
-        const {data:rows,error}=await sb.from('bw_queue').select('*').eq('status','waiting').gte('last_seen',since);
-        if(error && !/does not exist|schema cache/i.test(error.message||'')) throw error;
-        result={ok:true,players:rows||[]}; break;
-      }
-      case 'getConfig': {
-        const {data:rows,error}=await sb.from('bw_config').select('*');
-        if(error && !/does not exist|schema cache/i.test(error.message||'')) throw error;
-        const map={}; (rows||[]).forEach(r=>map[r.key]=r.value);
-        result={ok:true,config:map}; break;
-      }
-      case 'setConfig': {
-        const sess=(await sb.auth.getUser())?.data?.user;
-        const email=String(sess?.email||'').trim().toLowerCase();
-        const {data:arows}=await sb.from('bw_admins').select('email').ilike('email',email).limit(1);
-        if(!arows||!arows.length){ result={ok:false,error:'admin only'}; break; }
-        const {error:ce}=await sb.from('bw_config').upsert({key:d.key,value:d.value||'',updated_at:_sbNowIso()},{onConflict:'key'});
-        if(ce) throw ce; result={ok:true}; break;
-      }
-      case 'addFriend': { if(d.uid===d.targetUid){result={ok:false,error:'cannot add yourself'};break;} const {error:fe}=await sb.from('bw_friends').upsert({uid:d.uid,target_uid:d.targetUid,target_name:d.targetName||'',status:'accepted',ts:_sbNowIso()},{onConflict:'uid,target_uid'}); if(fe) throw fe; result={ok:true,msg:'フレンド追加成功！'}; break; }
+      case 'addFriend': { if(d.uid===d.targetUid){result={ok:false,error:'cannot add yourself'};break;} const {error:fe}=await sb.from('bw_friends').upsert({uid:d.uid,target_uid:d.targetUid,target_name:String(d.targetName||'').slice(0,64),status:'accepted',ts:_sbNowIso()},{onConflict:'uid,target_uid'}); if(fe) throw fe; result={ok:true,msg:'フレンド追加成功！'}; break; }
       case 'removeFriend': { const {error:fe}=await sb.from('bw_friends').delete().eq('uid',d.uid).eq('target_uid',d.targetUid); if(fe) throw fe; result={ok:true}; break; }
-      // v27追記: 管理者機能
-      case 'checkAdmin': {
-        const sess=(await sb.auth.getUser())?.data?.user;
-        const email=String(sess?.email||d.email||'').trim().toLowerCase();
-        if(!email){ result={ok:true,isAdmin:false}; break; }
-        const {data:arows,error:ae}=await sb.from('bw_admins').select('email').ilike('email',email).limit(1);
-        if(ae) throw ae;
-        result={ok:true,isAdmin:!!(arows&&arows.length),email};
-        break;
-      }
-      case 'heartbeat': {
-        const name=d.name||playerName||'Player';
-        const uid=d.uid||myPeerId;
-        const now=_sbNowIso();
-        if(!window._bwDemoPlayer){
-          const {error:pe}=await sb.from('bw_presence').upsert({uid,name,last_seen:now},{onConflict:'uid'});
-          if(pe && !/does not exist|schema cache/i.test(pe.message||'')) throw pe;
-          await sb.from('bw_history').upsert({uid,name,last_seen:now},{onConflict:'uid'});
-        }
-        result={ok:true};
-        break;
-      }
-      case 'getOnline': {
-        const since=_sbActiveSince(45);
-        let rows=[];
-        const q1=await sb.from('bw_presence').select('uid,name,last_seen').gte('last_seen',since).order('last_seen',{ascending:false}).limit(40);
-        if(!q1.error) rows=q1.data||[];
-        else {
-          const q2=await sb.from('bw_lobby').select('uid,name,last_seen').gte('last_seen',since).limit(40);
-          rows=q2.data||[];
-        }
-        result={ok:true,players:(rows||[]).filter(r=>r.uid!==myPeerId).map(r=>({uid:r.uid,name:r.name,lastSeen:r.last_seen}))};
-        break;
-      }
-      case 'getFriendChat': {
-        const pair=[d.uid,d.targetUid].sort().join('|');
-        const {data:rows,error}=await sb.from('bw_chat').select('*').eq('scope','friend').eq('team',pair).order('ts',{ascending:true}).limit(80);
-        if(error) throw error;
-        result={ok:true,msgs:(rows||[]).map(r=>({ts:r.ts,name:r.name,msg:r.msg,uid:r.uid}))};
-        break;
-      }
-      case 'postFriendChat': {
-        const pair=[d.uid,d.targetUid].sort().join('|');
-        const {error:ce}=await sb.from('bw_chat').insert({lobby_id:'main',match_id:null,scope:'friend',team:pair,uid:d.uid,name:d.name||'Player',msg:(d.msg||'').substring(0,300),color:'#ffffff',pc_id:d.uid,ts:_sbNowIso()});
-        if(ce) throw ce;
-        result={ok:true};
-        break;
-      }
-      case 'adminListPlayers': {
-        // ロビー+履歴+試合中プレイヤーの和集合を、重複排除して一覧表示する(管理者用)
-        const {data:hrows}=await sb.from('bw_history').select('*').order('last_seen',{ascending:false}).limit(200);
-        const {data:lrows}=await sb.from('bw_lobby').select('*');
-        const byUid={};
-        (hrows||[]).forEach(h=>{ byUid[h.uid]={uid:h.uid,name:h.name,level:h.level,kills:h.kills,wins:h.wins,lastSeen:h.last_seen,inLobby:false}; });
-        (lrows||[]).forEach(l=>{
-          if(byUid[l.uid]) byUid[l.uid].inLobby=true;
-          else byUid[l.uid]={uid:l.uid,name:l.name,level:1,kills:0,wins:0,lastSeen:l.last_seen,inLobby:true};
-        });
-        result={ok:true,players:Object.values(byUid)};
-        break;
-      }
-      case 'adminRenamePlayer': {
-        if(!d.targetUid||!d.newName) throw new Error('targetUid/newName required');
-        const nm=String(d.newName).slice(0,16);
-        const {error:e1}=await sb.from('bw_history').update({name:nm}).eq('uid',d.targetUid);
-        if(e1) throw e1;
-        await sb.from('bw_lobby').update({name:nm}).eq('uid',d.targetUid);
-        try{ await sb.from('bw_players').update({name:nm}).eq('uid',d.targetUid); }catch(e){}
-        result={ok:true,name:nm};
-        break;
-      }
-      case 'adminDeletePlayer': {
-        if(!d.targetUid) throw new Error('targetUid required');
-        const {data:rpcData,error:rpcErr}=await sb.rpc('bw_admin_delete_player',{p_uid:d.targetUid});
-        if(rpcErr) throw rpcErr;
-        result={ok:true,...rpcData};
-        break;
-      }
-      case 'getFriends': {
-        const {data:rows,error}=await sb.from('bw_friends').select('*').eq('uid',d.uid).eq('status','accepted'); if(error) throw error;
-        const base=(rows||[]).map(r=>({uid:r.target_uid,name:r.target_name}));
-        // v26修正: 以前はbw_friends(関連テーブル)のuid/名前しか返しておらず、
-        // kills/wins/level/skinを一切取得していなかったため、フレンド一覧が
-        // 常に「kills0 wins0 Lv1 木Ⅲ」固定表示になっていた。
-        // フレンドのuid一覧でbw_historyから実際の戦績をまとめて取得しマージする。
-        const uids=base.map(f=>f.uid).filter(Boolean);
-        let statsByUid={};
-        let lobbyOnlineSet=new Set();
-        if(uids.length){
-          const {data:hrows,error:he}=await sb.from('bw_history').select('*').in('uid',uids);
-          if(!he && hrows) statsByUid=Object.fromEntries(hrows.map(h=>[h.uid,h]));
-          // v26追記: bw_historyのlast_seenは試合終了時にしか更新されないため、
-          // より頻繁に更新される(ロビー滞在中は数秒おきに更新される)bw_lobbyの
-          // last_seenも合わせて見て、どちらか新しい方でオンライン判定する。
-          const {data:lrows}=await sb.from('bw_lobby').select('uid,last_seen').in('uid',uids);
-          (lrows||[]).forEach(l=>{ if(l.last_seen && (Date.now()-Date.parse(l.last_seen))<60000) lobbyOnlineSet.add(l.uid); });
-        }
-        const {data:prows}=await sb.from('bw_presence').select('uid,last_seen').in('uid',uids.length?uids:['__none__']);
-        (prows||[]).forEach(p=>{ if(p.last_seen && (Date.now()-Date.parse(p.last_seen))<45000) lobbyOnlineSet.add(p.uid); });
-        const friends=base.map(f=>{
-          const h=statsByUid[f.uid];
-          const lastSeenMs=h?.last_seen?Date.parse(h.last_seen):0;
-          const online=lobbyOnlineSet.has(f.uid) || (lastSeenMs>0 && (Date.now()-lastSeenMs)<45000);
-          return {uid:f.uid,name:f.name||h?.name,kills:h?.kills||0,wins:h?.wins||0,level:h?.level||1,skin:h?.skin||'',online};
-        });
-        result={ok:true,friends}; break;
-      }
+      case 'getFriends': { const {data:rows,error}=await sb.from('bw_friends').select('*').eq('uid',d.uid).eq('status','accepted'); if(error) throw error; const friends=(rows||[]).map(r=>({uid:r.target_uid,name:r.target_name})); result={ok:true,friends}; break; }
       case 'searchPlayers': { const kw=(d.keyword||'').replace(/[%_]/g,''); if(!kw){result={ok:false,error:'keyword too short'};break;} const {data:rows,error}=await sb.from('bw_history').select('*').ilike('name','%'+kw+'%').neq('uid',d.uid).limit(10); if(error) throw error; result={ok:true,results:(rows||[]).map(r=>({uid:r.uid,name:r.name,kills:r.kills||0,level:r.level||1,skin:r.skin||''}))}; break; }
       case 'getSettings': { const {data:rows,error}=await sb.from('bw_settings').select('*'); if(error) throw error; const cfg={syncInterval:480,blockInterval:800,bedInterval:2000,dmgInterval:500,chatInterval:3000}; (rows||[]).forEach(r=>{const v=parseInt(r.value);if(!isNaN(v))cfg[r.key]=v;}); result={ok:true,settings:cfg}; break; }
       case 'testPing': result={ok:true,ts:_sbNowIso()}; break;
@@ -6046,7 +4366,8 @@ function startSupabaseRealtime(){
   const bedsCh=sb.channel('bw-beds-'+currentMatchId).on('postgres_changes',{event:'*',schema:'public',table:'bw_beds',filter:'match_id=eq.'+currentMatchId},payload=>{ window.dispatchEvent(new CustomEvent('bw:beds',{detail:payload})); }).subscribe(report('beds'));
   const chatCh=sb.channel('bw-chat-'+currentMatchId).on('postgres_changes',{event:'INSERT',schema:'public',table:'bw_chat',filter:'match_id=eq.'+currentMatchId},payload=>{ window.dispatchEvent(new CustomEvent('bw:chat',{detail:payload})); }).subscribe(report('chat'));
   const lobbyChatCh=sb.channel('bw-chat-lobby').on('postgres_changes',{event:'INSERT',schema:'public',table:'bw_chat',filter:'lobby_id=eq.main'},payload=>{ window.dispatchEvent(new CustomEvent('bw:chat',{detail:payload})); }).subscribe(report('lobby-chat'));
-  _supabaseRealtimeChannels=[playersCh,actionsCh,blocksCh,bedsCh,chatCh,lobbyChatCh];
+  const damageCh=sb.channel('bw-damage-'+currentMatchId).on('postgres_changes',{event:'INSERT',schema:'public',table:'bw_damage',filter:'match_id=eq.'+currentMatchId},payload=>{ window.dispatchEvent(new CustomEvent('bw:damage',{detail:payload})); }).subscribe(report('damage'));
+  _supabaseRealtimeChannels=[playersCh,actionsCh,blocksCh,bedsCh,chatCh,lobbyChatCh,damageCh];
 }
 
 // Supabase接続エラーをUIに表示（"オンライン対戦できない"原因の可視化）
@@ -6058,39 +4379,15 @@ function _showSupabaseErrorBanner(msg){
     el.style.cssText='position:fixed;top:0;left:0;width:100%;background:#cc2222;color:#fff;padding:8px 16px;font-size:13px;z-index:9999;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.5)';
     document.body.appendChild(el);
   }
-  el.innerHTML=`⚠️ Supabase接続エラー: ${bwEscapeHTML(msg)}<br><small>Supabase URL / publishable key / Table / RLS Policy を確認してください</small>`;
+  el.innerHTML=`⚠️ Supabase接続エラー: ${_bwEscapeHtml(msg)}<br><small>Supabase URL / publishable key / Table / RLS Policy を確認してください</small>`;
   el.style.display='block';
 }
 function _hideSupabaseErrorBanner(){
   const el=document.getElementById('supabase-error-banner');
   if(el) el.style.display='none';
 }
-window._bwDmgDebug={sent:0,sendFail:0,lastSendErr:'',received:0,pollCount:0,pollFail:0,lastPollErr:'',lastPollAt:0};
 async function sendDamageSupabase(uid,amount,type='melee'){
-  window._bwDmgDebug.sent++;
-  if(!uid||!currentMatchId){
-    window._bwDmgDebug.sendFail++;
-    window._bwDmgDebug.lastSendErr='uidまたはmatchIdが空';
-    return;
-  }
-  const res=await sbRequest({action:'damage',matchId:currentMatchId,from:myPeerId,to:uid,amount,type});
-  if(!res||!res.ok){
-    window._bwDmgDebug.sendFail++;
-    window._bwDmgDebug.lastSendErr=(res&&res.error)||'null応答(matchId未設定/接続エラーの可能性)';
-    console.error('[BW damage send失敗]',window._bwDmgDebug.lastSendErr,{uid,amount,type,matchId:currentMatchId});
-  }
-}
-function _bwStartDamageRealtime(){
-  if(!window.supabaseClient||!currentMatchId) return;
-  try{ if(window.__bwDmgChannel) window.supabaseClient.removeChannel(window.__bwDmgChannel); }catch(e){}
-  window.__bwDmgChannel=window.supabaseClient.channel('bw-dmg-'+currentMatchId+'-'+myPeerId)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bw_damage',filter:'to_uid=eq.'+myPeerId},payload=>{
-      const row=payload.new; if(!row) return;
-      if(row.match_id && currentMatchId && row.match_id!==currentMatchId) return;
-      window._bwDmgDebug.received++;
-      applyNetworkDamage(+row.amount||0,row.from_uid,row.type);
-    })
-    .subscribe();
+  await sbRequest({action:'damage',matchId:currentMatchId,from:myPeerId,to:uid,amount,type});
 }
 
 // ================================================================
@@ -6101,23 +4398,20 @@ let lobbyInterval=null,currentTeamMode=2;
 // ロビーから抜けて選択画面(タイトル)に戻る（"抜け出せなくなるバグ"の修正）
 async function leaveLobbyToTitle(){
   if(lobbyInterval){clearInterval(lobbyInterval);lobbyInterval=null;}
+  stopMultiplayerLoops();
   try{ await sbRequest({action:'lobbyLeave',uid:myPeerId}); }catch(e){}
   player.isSpectator=false;
   document.getElementById('host-controls').style.display='none';
   document.getElementById('guest-controls').style.display='none';
-  const wait=document.getElementById('bw-wait-lobby');
-  if(wait) wait.style.display='none';
   document.getElementById('lobby-status').textContent='モードを選んでください';
   const listEl=document.getElementById('player-list');
-  if(listEl) listEl.innerHTML='';
+  if(listEl) listEl.innerHTML='<div style="color:#666;font-size:18px">ここに参加者が表示されます</div>';
 }
 
 async function joinLobby(){
   const name=document.getElementById('player-name').value.trim()||'Player';
   player.name=name;playerName=name;
-  if(!window._bwDemoPlayer && !_bwIsDemoName(name)) localStorage.setItem('bw_name',name);
-  const wait=document.getElementById('bw-wait-lobby');
-  if(wait) wait.style.display='block';
+bwStorage.set('bw_name',name);
   document.getElementById('lobby-status').textContent='接続中...';
 
   const wantSpectator = document.getElementById('join-as-spectator-check')?.checked || false;
@@ -6159,7 +4453,7 @@ async function pollLobby(){
     if(isMe&&isH) iAmHost=true;
     const tc=TEAM_COLOR_HEX[p.team]||'#fff';
     div.style.color=isMe?'#ffff88':'#ddd';
-    div.innerHTML=`<span style="color:${bwSafeColor(tc,'#fff')}">■</span> ${bwEscapeHTML(p.name)}${isH?' 👑':''}${isMe?' (YOU)':''}`;
+    div.innerHTML=`<span style="color:${tc}">■</span> ${_bwEscapeHtml(p.name)}${isH?' 👑':''}${isMe?' (YOU)':''}`;
     listEl.appendChild(div);
   });
 
@@ -6239,11 +4533,10 @@ function startTraining(type){ player.isSpectator=false; player.spectatorMode=fal
 function startGame(mode){
   const name=document.getElementById('player-name').value.trim()||'Player';
   player.name=name;playerName=name;
-  if(!window._bwDemoPlayer && !_bwIsDemoName(name)) localStorage.setItem('bw_name',name);
+bwStorage.set('bw_name',name);
   player.team='Blue';teamMode=2;gameMode=mode;
   // マップ選択を確定（ランダムならここで決定）
   _resolveMapTheme();
-  window._bwPlaySFX('start');
   startGamePlay();
 }
 
@@ -6262,30 +4555,10 @@ function _initMapThemeSelect(){
     sel.appendChild(opt);
   });
 }
-// v27追記: オンライン状況の精度向上。
-// 以前は「オンライン対戦」ボタンを押してマッチメイキングに参加するまで
-// bw_lobbyに一切書き込まれず、タイトル画面を眺めているだけの人は
-// フレンド一覧で常に「オフライン」表示になっていた。
-// ページを開いた時点(タイトル画面)から軽量な在席通知(プレゼンス)を
-// バックグラウンドで送り続けることで、実際にブラウザタブを開いている人を
-// 正しく「オンライン」として検出できるようにする。
-window.addEventListener('load',()=>{
-  const ping=()=>{
-    if(typeof gameMode!=='undefined' && gameMode && gameMode!=='lobby') return; // 対戦中は既に別の同期がある
-    const name=document.getElementById('player-name')?.value?.trim()||playerName||'Player';
-    sbRequest({action:'lobbyJoin',uid:myPeerId,name}).catch(()=>{});
-  };
-  setTimeout(ping,1500);
-  setInterval(ping,20000);
-});
 window.addEventListener('load',_initMapThemeSelect);
 function startGamePlay(){
-  window._bwMatchStartKills=playerData.kills||0;
-  window._bwMatchStartWins=playerData.wins||0;
-  window.gameMode=gameMode;
   document.getElementById('lobby').style.display='none';
-  if(typeof _bwRefreshProfileChip==='function') _bwRefreshProfileChip();
-  localStorage.removeItem('bw_lobby_players');
+bwStorage.remove('bw_lobby_players');
   clearInterval(lobbyInterval);
   
   // Reset all game state
@@ -6305,7 +4578,7 @@ function startGamePlay(){
     player.respawnProtection=3; // 3 seconds invulnerability（通常プレイヤーのみ）
   }
 
-  _bwRequestPointerLock();
+  document.body.requestPointerLock();
   initScene();
   // v8: 保存済み設定を適用
   if(camera){
@@ -6332,7 +4605,7 @@ function startGamePlay(){
     initBowCharge();
     _updateHandItem();
     // スキンをlocalStorageから読み込んでメッシュ更新
-    const savedSkin=localStorage.getItem('mc3d_skin')||localStorage.getItem('bw_skin');
+    const savedSkin=bwStorage.get('mc3d_skin')||bwStorage.get('bw_skin');
     if(savedSkin){
       loadSkinFromDataURL(savedSkin,()=>{
         if(playerMesh3p) refreshPlayerMeshSkin();
@@ -6390,7 +4663,6 @@ function shootBow(){
   const vel=dir.clone().multiplyScalar(0.6); // Arrow speed (normalized from original)
   arrowMesh.userData={vel,life:3,isArrow:true};
   scene.add(arrowMesh);arrows.push(arrowMesh);
-  window._bwPlaySFX('bow');
   updateUI();
 }
 
@@ -6485,25 +4757,17 @@ function checkWin(){
     if(isWin){
       playerData.wins++;
       playerData.level=Math.max(1,~~(playerData.kills/5)+1);
-      localStorage.setItem('bw_data',JSON.stringify(playerData));
+bwStorage.set('bw_data',JSON.stringify(playerData));
     }
     // マルチ時: Supabaseに終了通知
     if(gameMode==='multi'){
+      stopMultiplayerLoops();
       sbRequest({action:'leave',uid:myPeerId});
       // 履歴更新
-      if(!window._bwDemoPlayer){
-        const dK=Math.max(0,(playerData.kills||0)-(window._bwMatchStartKills||0));
-        const dW=Math.max(0,(playerData.wins||0)-(window._bwMatchStartWins||0));
-        playerData.seasonKills=(playerData.seasonKills||0)+dK;
-        playerData.seasonWins=(playerData.seasonWins||0)+dW;
-        localStorage.setItem('bw_data',JSON.stringify(playerData));
-        sbRequest({action:'updateHistory',uid:myPeerId,name:player.name,kills:dK,wins:dW,level:playerData.level,skin:(skinUrl||playerSkin||'')});
-        sbRequest({action:'updateSeason',uid:myPeerId,name:player.name,kills:dK,wins:dW});
-      }
+      sbRequest({action:'updateHistory',uid:myPeerId,name:player.name,kills:playerData.kills,wins:playerData.wins,level:playerData.level,skin:(skinUrl||playerSkin||'')});
     }
     // 3秒後に終了画面
     setTimeout(()=>showEndScreen(winner,isWin), 2000);
-    window._bwPlaySFX(isWin?'win':'lose');
     announce(isWin?'🏆 YOU WIN!':'💀 GAME OVER', isWin?'#FFAA00':'#ff5555');
   }
 }
@@ -6514,11 +4778,10 @@ checkWin._fired=false;
 // ================================================================
 function showEndScreen(winner, isWin){
   _releaseCursor();
+  // 終了画面を表示
   const es=document.getElementById('end-screen');
   if(!es) return;
   es.style.display='block';
-  setTimeout(_releaseCursor,50);
-  setTimeout(_releaseCursor,250);
 
   // タイトル
   document.getElementById('end-title').textContent = isWin?'🏆 YOU WIN!':'💀 GAME OVER';
@@ -6556,9 +4819,9 @@ function showEndScreen(winner, isWin){
         '<tr style="border-bottom:1px solid #333;color:#888"><th style="text-align:left">#</th><th>名前</th><th>KILL</th><th>Lv</th></tr>'+
         res.history.slice(0,10).map((p,i)=>`<tr style="border-bottom:1px solid #222;${p.name===player.name?'background:rgba(255,170,0,0.1)':''}">
           <td style="color:#888">${i+1}</td>
-          <td style="color:${p.name===player.name?'#ffaa00':'#ccc'}">${bwEscapeHTML(p.name)}</td>
-          <td style="color:#ff5555">${p.kills}</td>
-          <td style="color:#55ffff">${p.level}</td>
+          <td style="color:${p.name===player.name?'#ffaa00':'#ccc'}">${_bwEscapeHtml(p.name)}</td>
+          <td style="color:#ff5555">${Number(p.kills)||0}</td>
+          <td style="color:#55ffff">${Number(p.level)||1}</td>
         </tr>`).join('')+
         '</table>';
     });
@@ -6617,7 +4880,7 @@ let _endChatInterval=null;
 let _endChatLastTs='';
 function _startEndChatPoll(){
   _endChatInterval=setInterval(async()=>{
-    const res=await sbRequest({action:'getMsgs',scope:'post'});
+    const res=await sbRequest({action:'getMsgs',scope:'post',matchId:currentMatchId});
     if(!res||!res.ok||!Array.isArray(res.msgs)) return;
     const el=document.getElementById('end-chat-log');
     if(!el) return;
@@ -6627,7 +4890,7 @@ function _startEndChatPoll(){
       _endChatLastTs=ts;
       const div=document.createElement('div');
       div.style.cssText='padding:2px 0;border-bottom:1px solid #222';
-      div.innerHTML=`<span style="color:${bwSafeColor(m.color)};font-weight:bold">${bwEscapeHTML(m.name)}:</span> ${bwEscapeHTML(m.msg)}`;
+      div.innerHTML=`<span style="color:${_bwSafeColor(m.color,'#ccc')};font-weight:bold">${_bwEscapeHtml(m.name)}:</span> ${_bwEscapeHtml(m.msg)}`;
       el.appendChild(div);
       el.scrollTop=el.scrollHeight;
     });
@@ -6640,12 +4903,12 @@ async function sendEndChat(){
   const msg=input.value.trim();
   if(!msg) return;
   input.value='';
-  await sbRequest({action:'postMsg',name:player.name,msg:`[終了後] ${msg}`,color:TEAM_COLOR_HEX[player.team]||'#fff',pcId:myPeerId,scope:'post'});
+  await sbRequest({action:'postMsg',name:player.name,msg:`[終了後] ${msg}`,color:TEAM_COLOR_HEX[player.team]||'#fff',pcId:myPeerId,matchId:currentMatchId,scope:'post'});
   const el=document.getElementById('end-chat-log');
   if(el){
     const div=document.createElement('div');
     div.style.cssText='padding:2px 0;border-bottom:1px solid #222;color:#ffff88';
-      div.innerHTML=`<b>${bwEscapeHTML(player.name)}(自):</b> [終了後] ${bwEscapeHTML(msg)}`;
+    div.innerHTML=`<b>${_bwEscapeHtml(player.name)}(自):</b> [終了後] ${_bwEscapeHtml(msg)}`;
     el.appendChild(div);el.scrollTop=el.scrollHeight;
   }
 }
@@ -6654,26 +4917,14 @@ async function sendEndChat(){
 async function leaveToLobby(){
   if(_endBgAnimId) cancelAnimationFrame(_endBgAnimId);
   if(_endChatInterval) clearInterval(_endChatInterval);
-  if(mpSyncInterval) clearInterval(mpSyncInterval);
+  stopMultiplayerLoops();
 
   if(gameMode==='multi'){
     // Supabaseに退出を通知
     await sbRequest({action:'leave', uid:myPeerId});
-
-    // 少し待ってから残存プレイヤーを確認
-    await new Promise(r=>setTimeout(r,800));
-    const check=await sbRequest({action:'sync',uid:'__chk__',name:'__chk__',team:'Blue',x:0,y:0,z:0,hp:0,bed:0});
-    const remaining=(check?.players||[]).filter(p=>p.uid!=='__chk__'&&p.uid!==myPeerId&&p.hp>0);
-
-    if(remaining.length===0){
-      // 全員退出済み → Supabaseデータを完全リセット
-      await Promise.all([
-        sbRequest({action:'clearBlocks'}),
-        sbRequest({action:'clearBeds'}),
-        sbRequest({action:'clearDamage'}),
-        sbRequest({action:'clearBattleChat'}),
-      ]);
-    }
+    await new Promise(r=>setTimeout(r,300));
+    // サーバー側で残存プレイヤーがいない場合のみ試合データを削除する。
+    if(currentMatchId) await sbRequest({action:'clearMatch',matchId:currentMatchId});
   }
 
   // ローカル状態をリセット
@@ -6730,7 +4981,8 @@ const STEVE=generateSteveSkin();
 // オーバーレイ画素をベース画素の位置へアルファ合成した「合成済みスキン画像」を
 // 事前に1枚作ってからCSSプレビューに渡すことで、実モデルと一致させる。
 function _buildComposedSkinForPreview(rawUrl, cb){
-  if(!rawUrl){cb(rawUrl);return;}
+  const safe=_bwSafeImageSource(rawUrl);
+  if(!safe){cb(rawUrl);return;}
   const img=new Image();
   img.crossOrigin='anonymous';
   img.onload=()=>{
@@ -6760,26 +5012,112 @@ function _buildComposedSkinForPreview(rawUrl, cb){
     }catch(e){ cb(rawUrl); } // CORS等で失敗した場合は元画像のままフォールバック
   };
   img.onerror=()=>cb(rawUrl);
-  img.src=rawUrl;
+  img.src=safe;
 }
 
 function applySkin(url){
   // まず即座に元画像を反映(空白防止)。合成が完了次第、正しい見た目に差し替える。
-  document.querySelectorAll('.face').forEach(el=>el.style.backgroundImage=`url(${url})`);
-  _buildComposedSkinForPreview(url, composed=>{
-    document.querySelectorAll('.face').forEach(el=>el.style.backgroundImage=`url(${composed})`);
+  const safe=_bwSafeImageSource(url)||STEVE;
+  document.querySelectorAll('.face').forEach(el=>el.style.backgroundImage=`url(${_bwSafeCssUrl(safe)})`);
+  _buildComposedSkinForPreview(safe, composed=>{
+    const composedSafe=_bwSafeImageSource(composed)||safe;
+    document.querySelectorAll('.face').forEach(el=>el.style.backgroundImage=`url(${_bwSafeCssUrl(composedSafe)})`);
   });
 }
 applySkin(STEVE);
+
+// ---- Lobby background (local only, no external asset) ----
+const _bwLobbyBgPresets=[
+  {name:'夕焼け',css:'linear-gradient(135deg,#1b1035,#5b2a86 45%,#ff8a5c)'},
+  {name:'深海',css:'linear-gradient(135deg,#021b2f,#064663 55%,#0f8b8d)'},
+  {name:'草原',css:'linear-gradient(135deg,#0b2d1b,#2f6f3e 55%,#a7c957)'},
+  {name:'夜桜',css:'linear-gradient(135deg,#120b1f,#4a1e3f 55%,#ff8fab)'}
+];
+function _bwLobbyBgCss(stored){
+  if(!stored) return '';
+  if(stored.startsWith('image:')){
+    const img=_bwSafeImageSource(stored.slice(6));
+    return img ? `url(${_bwSafeCssUrl(img)})` : '';
+  }
+  if(stored.startsWith('preset:')){
+    const idx=Number(stored.slice(7));
+    return Number.isInteger(idx) && _bwLobbyBgPresets[idx] ? _bwLobbyBgPresets[idx].css : '';
+  }
+  const legacyImage=_bwSafeImageSource(stored);
+  return legacyImage ? `url(${_bwSafeCssUrl(legacyImage)})` : '';
+}
+function _bwApplyLobbyBackground(css){
+  const lobby=document.getElementById('lobby');
+  if(!lobby || !css) return;
+  lobby.style.setProperty('--lobby-bg', css);
+}
+function _bwSetLobbyBackground(stored){
+  const css=_bwLobbyBgCss(stored);
+  if(!css && stored) return;
+  _bwApplyLobbyBackground(css);
+  try{
+    if(stored) bwStorage.set('bw_lobby_bg', stored);
+    else bwStorage.remove('bw_lobby_bg');
+  }catch(e){ console.warn('背景設定を保存できませんでした', e); }
+}
+function _bwRenderBgThumbs(){
+  const grid=document.getElementById('bg-thumb-grid');
+  if(!grid) return;
+  grid.innerHTML='';
+  _bwLobbyBgPresets.forEach((preset,idx)=>{
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.title=preset.name;
+    btn.textContent=preset.name;
+    btn.style.cssText=`height:44px;border:2px solid #555;border-radius:3px;cursor:pointer;background:${preset.css};color:#fff;font-size:11px;text-shadow:1px 1px 0 #000`;
+    btn.onclick=()=>{ _bwSetLobbyBackground('preset:'+idx); const sel=document.getElementById('bg-selector'); if(sel) sel.style.display='none'; };
+    grid.appendChild(btn);
+  });
+  const reset=document.createElement('button');
+  reset.type='button';
+  reset.textContent='既定に戻す';
+  reset.style.cssText='height:36px;border:2px solid #555;border-radius:3px;cursor:pointer;background:#222;color:#ddd;font-size:12px';
+  reset.onclick=()=>{ _bwSetLobbyBackground(''); const lobby=document.getElementById('lobby'); if(lobby) lobby.style.removeProperty('--lobby-bg'); const sel=document.getElementById('bg-selector'); if(sel) sel.style.display='none'; };
+  grid.appendChild(reset);
+}
+function toggleBgSelector(){
+  const el=document.getElementById('bg-selector');
+  if(!el) return;
+  const open=el.style.display==='none' || !el.style.display;
+  el.style.display=open?'block':'none';
+  if(open) _bwRenderBgThumbs();
+}
+{
+  const saved=bwStorage.get('bw_lobby_bg');
+  const css=_bwLobbyBgCss(saved);
+  if(css) _bwApplyLobbyBackground(css);
+  const input=document.getElementById('bg-file-input');
+  if(input){
+    input.addEventListener('change',e=>{
+      const file=e.target.files?.[0]; if(!file) return;
+      if(file.size>4*1024*1024){announce('⚠️ 画像は4MB以下にしてください','#ff5555');return;}
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const safe=_bwSafeImageSource(reader.result);
+        if(!safe){announce('⚠️ 画像ファイルを読み込めませんでした','#ff5555');return;}
+        _bwSetLobbyBackground('image:'+safe);
+        const sel=document.getElementById('bg-selector'); if(sel) sel.style.display='none';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+}
 
 document.getElementById('skin-file').addEventListener('change',e=>{
   const file=e.target.files[0];if(!file)return;
   const r=new FileReader();
   r.onload=ev=>{
-    skinUrl=ev.target.result;
+    const safe=_bwSafeImageSource(ev.target.result);
+    if(!safe){announce('⚠️ 画像ファイルを読み込めませんでした','#ff5555');return;}
+    skinUrl=safe;
     playerSkin=skinUrl;
-    localStorage.setItem('bw_skin',skinUrl);
-    localStorage.setItem('mc3d_skin',skinUrl);
+    bwStorage.set('bw_skin',skinUrl);
+    bwStorage.set('mc3d_skin',skinUrl);
     applySkin(skinUrl);
     // ゲーム中メッシュにも即時反映
     loadSkinFromDataURL(skinUrl,()=>{
@@ -6798,7 +5136,7 @@ document.getElementById('skin-file').addEventListener('change',e=>{
   r.readAsDataURL(file);
 });
 // Apply saved skin on load
-const _initSkin=localStorage.getItem('mc3d_skin')||localStorage.getItem('bw_skin')||playerSkin;
+const _initSkin=_bwSafeImageSource(bwStorage.get('mc3d_skin'))||_bwSafeImageSource(bwStorage.get('bw_skin'))||_bwSafeImageSource(playerSkin);
 if(_initSkin){applySkin(_initSkin);skinUrl=_initSkin;loadSkinFromDataURL(_initSkin,null);}
 
 // Lobby skin drag rotation + walking animation
@@ -6836,7 +5174,7 @@ let _gamePaused=false;
 
 // PointerLock管理: メニュー/終了画面ではカーソルを解放
 function _releaseCursor(){ try{document.exitPointerLock();}catch(e){} }
-function _captureCursor(){ _bwRequestPointerLock(); }
+function _captureCursor(){ try{document.body.requestPointerLock();}catch(e){} }
 
 // PointerLock変更イベント
 document.addEventListener('pointerlockchange',()=>{
@@ -6861,9 +5199,11 @@ document.addEventListener('pointerlockchange',()=>{
   const igOpen=document.getElementById('ingame-menu')?.style.display==='block';
   const endOpen=document.getElementById('end-screen')?.style.display==='block';
   const settOpen=document.getElementById('settings-panel')?.style.display==='block';
-  if(!locked && _bwCanLockPointer()){
+  if(!locked&&!pauseOpen&&!igOpen&&!endOpen&&!settOpen&&gameMode!=='lobby'&&!activeMenu){
+    // 意図せず外れた場合のみ再取得
     setTimeout(()=>{
-      if(!document.pointerLockElement && _bwCanLockPointer()) _captureCursor();
+      const pl2=!!document.pointerLockElement;
+      if(!pl2&&gameMode!=='lobby'&&!activeMenu) _captureCursor();
     },200);
   }
 });
@@ -6914,7 +5254,7 @@ const DEFAULT_SETTINGS = {
   scrollSlot:true,
   // グラフィック
   fov:70, dynamicFOV:true, drawDist:150, texQuality:1,
-  viewBobbing:true, screenShake:true, particles:true, liteMode:false, anim:70,
+  viewBobbing:true, screenShake:true, particles:true,
   gamma:1.0, sky:'day', shadow:'low',
   // HUD
   crosshair:'cross', uiScale:1,
@@ -6931,11 +5271,12 @@ const DEFAULT_SETTINGS = {
     use:'KeyF', drop:'KeyQ', thirdPerson:'F5',
     chatAll:'Backspace', chatTeam:'Enter',
     inv:'KeyI', shop:'KeyE', scoreboard:'Tab',
-    drop2:'捨てる'
+    drop2:'ArrowDown'
   }
 };
-let currentSettings = JSON.parse(localStorage.getItem('bw_settings')||'null')
-  || JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+const _savedSettings = _bwSafeJsonParse(bwStorage.get('bw_settings'), null);
+let currentSettings = Object.assign({}, JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), _savedSettings || {});
+currentSettings.keys = Object.assign({}, DEFAULT_SETTINGS.keys, (_savedSettings && _savedSettings.keys) || {});
 
 // トグル設定の適用
 function setToggle(key, val){
@@ -6957,7 +5298,6 @@ function openSettings(){
   const setLbl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
 
   setVal('set-fov',s.fov||70);     setLbl('lbl-fov',s.fov||70);
-  setVal('set-anim',s.anim||70);   setLbl('lbl-anim',s.anim||70);
   setVal('set-draw',s.drawDist||150); setLbl('lbl-draw',s.drawDist||150);
   setVal('set-tex',s.texQuality||1);
   setVal('set-sens',Math.round((s.sens||0.15)*100)); setLbl('lbl-sens',(s.sens||0.15).toFixed(2));
@@ -6981,7 +5321,6 @@ function openSettings(){
   setChk('set-viewBobbing',s.viewBobbing!==false);
   setChk('set-screenShake',s.screenShake!==false);
   setChk('set-particles',s.particles!==false);
-  setChk('set-liteMode',s.liteMode);
   setChk('set-showCps',s.showCps);
   setChk('set-showDebug',s.showDebug!==false);
   setChk('set-showArmor',s.showArmor!==false);
@@ -6991,10 +5330,6 @@ function openSettings(){
   setChk('set-invertY',s.invertY);
   setChk('set-spatialAudio',s.spatialAudio!==false);
   setChk('set-bedAlert',s.bedAlert!==false);
-  const scheme=document.getElementById('set-controlScheme');
-  if(scheme) scheme.value=window._bwControlScheme||'kbm';
-  const demoChk=document.getElementById('set-demoPlayer');
-  if(demoChk) demoChk.checked=!!window._bwDemoPlayer;
 
   _renderKeybindList();
 }
@@ -7002,8 +5337,8 @@ function openSettings(){
 function closeSettings(){
   const el=document.getElementById('settings-panel');
   if(el) el.style.display='none';
-  setTimeout(()=>{ if(_bwCanLockPointer()) _captureCursor(); },80);
-  if(gameMode!=='lobby') _resumeRTATimer();
+  setTimeout(_captureCursor,80);
+  _resumeRTATimer();
 }
 
 // スライダー変更時に即時反映
@@ -7028,10 +5363,8 @@ function applySettings(){
   setLbl('lbl-sens',sens.toFixed(2)); setLbl('lbl-gamma',gamma.toFixed(1));
   setLbl('lbl-vol',vol); setLbl('lbl-bgm',bgm); setLbl('lbl-sfx',sfx);
 
-  const anim=parseInt(getV('set-anim'));
-  if(document.getElementById('lbl-anim') && Number.isFinite(anim)) document.getElementById('lbl-anim').textContent=anim;
   Object.assign(currentSettings,{fov,drawDist:draw,texQuality:tex,sens,
-    gamma,vol,bgm,sfx,sky,shadow,crosshair,uiScale,anim:Number.isFinite(anim)?anim:(currentSettings.anim||70)});
+    gamma,vol,bgm,sfx,sky,shadow,crosshair,uiScale});
 
   applySettingEffects();
 }
@@ -7050,22 +5383,10 @@ function applySettingEffects(){
     ch.style.display=s.crosshair==='none'?'none':'block';
   }
 
+  // 空の色
   if(scene){
     const skyColors={day:0x87CEEB,evening:0xe87832,night:0x0a0a2a,cycle:0x87CEEB};
-    const fogColors={day:0xb7cfe0,evening:0xe8a878,night:0x0a1020,cycle:0xb7cfe0};
     scene.background=new THREE.Color(skyColors[s.sky||'day']||0x87CEEB);
-    if(scene.fog) scene.fog.color=new THREE.Color(fogColors[s.sky||'day']||0xb7cfe0);
-    if(window._bwSunLight){
-      const sh=s.shadow||'low';
-      window._bwSunLight.intensity=sh==='off'?0.55:sh==='high'?1.55:1.25;
-      if(window._bwSunLight.shadow){
-        window._bwSunLight.shadow.radius=sh==='high'?4.2:2.2;
-      }
-    }
-    if(renderer){
-      renderer.shadowMap.enabled=s.shadow!=='off' && !s.liteMode;
-      if(renderer.toneMappingExposure!==undefined) renderer.toneMappingExposure=s.sky==='night'?0.72:s.sky==='evening'?1.05:1.18;
-    }
   }
 
   // 明るさ (ambient light)
@@ -7097,98 +5418,13 @@ function applySettingEffects(){
 }
 
 function saveSettings(){
-  localStorage.setItem('bw_settings',JSON.stringify(currentSettings));
+  bwStorage.set('bw_settings',JSON.stringify(currentSettings));
   closeSettings();
   announce('✅ 設定を保存しました','#55ff55');
 }
-window._bwApplyLiteMode=function(on){
-  currentSettings.liteMode=!!on;
-  try{
-    if(renderer){
-      renderer.setPixelRatio(on?1:Math.min(devicePixelRatio,1.5));
-      renderer.shadowMap.enabled=!on && (localStorage.getItem('bw_shadow_on')!=='0');
-      if(window._bwSunLight) window._bwSunLight.castShadow=!on;
-    }
-    if(on){
-      currentSettings.particles=false;
-      currentSettings.screenShake=false;
-      window._bwFluidEnabled=false;
-    }
-  }catch(e){}
-};
-window._bwLoadPresets=function(){
-  try{ return JSON.parse(localStorage.getItem('bw_setting_presets')||'[]'); }catch(e){ return []; }
-};
-window._bwRenderPresets=function(){
-  const el=document.getElementById('bw-preset-list'); if(!el) return;
-  const list=window._bwLoadPresets();
-  if(!list.length){ el.textContent='まだありません'; return; }
-  el.innerHTML=list.map((p,i)=>`<div style="display:flex;gap:6px;align-items:center;margin:4px 0">
-    <button class="mc-btn" style="flex:1;font-size:12px" onclick="window._bwApplyPreset(${i})">${p.name||('セット'+(i+1))} ${p.key?('['+p.key+']'):''}</button>
-    <button class="mc-btn" style="font-size:11px" onclick="window._bwPresetBindIdx=${i};announce('キーを押して割り当て','#ffcc66')">キー</button>
-    <button class="mc-btn btn-red" style="font-size:11px" onclick="window._bwDeletePreset(${i})">×</button>
-  </div>`).join('');
-};
-window._bwSavePreset=function(){
-  const pick={
-    gfx:!!document.getElementById('bw-ps-gfx')?.checked,
-    ctrl:!!document.getElementById('bw-ps-ctrl')?.checked,
-    snd:!!document.getElementById('bw-ps-snd')?.checked,
-    keys:!!document.getElementById('bw-ps-keys')?.checked
-  };
-  const slice={};
-  if(pick.gfx) ['sky','shadow','texQuality','gamma','particles','liteMode','drawDist','anim'].forEach(k=>slice[k]=currentSettings[k]);
-  if(pick.ctrl) ['fov','dynamicFOV','sens','invertY','viewBobbing','autoSprint'].forEach(k=>slice[k]=currentSettings[k]);
-  if(pick.snd) ['vol','bgm','sfx'].forEach(k=>slice[k]=currentSettings[k]);
-  if(pick.keys) slice.keys=JSON.parse(JSON.stringify(currentSettings.keys||{}));
-  const name=[pick.gfx&&'画',pick.ctrl&&'操',pick.snd&&'音',pick.keys&&'鍵'].filter(Boolean).join('+')||'設定';
-  const list=window._bwLoadPresets();
-  list.unshift({name, pick, settings:slice, key:null});
-  localStorage.setItem('bw_setting_presets', JSON.stringify(list.slice(0,12)));
-  window._bwRenderPresets();
-  announce('🔖 '+name+' を保存','#55ff55');
-};
-window._bwBindPresetKey=function(){
-  window._bwPresetBindIdx=0;
-  announce('次に押したキーをクイック設定1に割り当てます','#ffcc66');
-};
-window._bwApplyPreset=function(i){
-  const p=window._bwLoadPresets()[i]; if(!p||!p.settings) return;
-  Object.assign(currentSettings, p.settings);
-  localStorage.setItem('bw_settings',JSON.stringify(currentSettings));
-  if(typeof openSettings==='function') openSettings();
-  window._bwApplyLiteMode(!!currentSettings.liteMode);
-  announce('🔖 '+(p.name||'設定')+' を適用','#55ffff');
-};
-window._bwDeletePreset=function(i){
-  const list=window._bwLoadPresets(); list.splice(i,1);
-  localStorage.setItem('bw_setting_presets', JSON.stringify(list));
-  window._bwRenderPresets();
-};
-document.addEventListener('keydown',e=>{
-  if(e.repeat) return;
-  if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-  if(window._bwPresetBindIdx!=null){
-    const list=window._bwLoadPresets();
-    if(list[window._bwPresetBindIdx]){ list[window._bwPresetBindIdx].key=e.code; localStorage.setItem('bw_setting_presets',JSON.stringify(list)); }
-    window._bwPresetBindIdx=null;
-    window._bwRenderPresets();
-    announce('キー '+e.code+' を割り当てました','#55ff55');
-    return;
-  }
-  const list=window._bwLoadPresets();
-  const hit=list.findIndex(p=>p.key===e.code);
-  if(hit>=0){ window._bwApplyPreset(hit); return; }
-  if(e.code==='F6'||e.code==='F7'||e.code==='F8'){
-    const idx=e.code==='F6'?0:e.code==='F7'?1:2;
-    window._bwApplyPreset(idx);
-  }
-});
-setTimeout(()=>{ try{ window._bwRenderPresets(); window._bwApplyLiteMode(!!currentSettings.liteMode); }catch(e){} },800);
 
 function resetSettings(){
   currentSettings=JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
-  if(typeof window._bwSetDemoPlayer==='function') window._bwSetDemoPlayer(false);
   openSettings();
   announce('↩ 設定をリセットしました','#ffaa00');
 }
@@ -7199,8 +5435,7 @@ const KEYBIND_LABELS = {
   jump:'ジャンプ', crouch:'スニーク', sprint:'ダッシュ',
   use:'使用[F]', drop:'ドロップ', thirdPerson:'三人称',
   chatAll:'全体チャット', chatTeam:'チームチャット',
-  inv:'インベントリ', shop:'ショップ', scoreboard:'スコアボード',
-  drop2:'捨てる'
+  inv:'インベントリ', shop:'ショップ', scoreboard:'スコアボード'
 };
 let _rebindingKey = null;
 function _renderKeybindList(){
@@ -7209,10 +5444,10 @@ function _renderKeybindList(){
   el.innerHTML='';
   Object.entries(currentSettings.keys).forEach(([action,code])=>{
     const label=document.createElement('div');
-    label.style.cssText='color:#222;font-size:13px;display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #8a8a8a';
-    const display=code.replace('Key','').replace('Digit','').replace('Arrow','↑').replace('Left','L').replace('Right','R');
-    label.innerHTML=`<span>${KEYBIND_LABELS[action]||action}</span>
-      <button data-action="${action}" style="padding:2px 8px;background:#333;color:#fff;border:1px solid #555;border-radius:2px;cursor:pointer;font-size:11px">${display}</button>`;
+    label.style.cssText='color:#ccc;font-size:12px;display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid #222';
+    const display=String(code||'').replace('Key','').replace('Digit','').replace('Arrow','↑').replace('Left','L').replace('Right','R');
+    label.innerHTML=`<span>${_bwEscapeHtml(KEYBIND_LABELS[action]||action)}</span>
+      <button data-action="${_bwEscapeHtml(action)}" style="padding:2px 8px;background:#333;color:#fff;border:1px solid #555;border-radius:2px;cursor:pointer;font-size:11px">${_bwEscapeHtml(display)}</button>`;
     label.querySelector('button').addEventListener('click',e=>{
       _rebindingKey=e.target.dataset.action;
       e.target.textContent='...';
@@ -7235,16 +5470,10 @@ window.addEventListener('keydown',e=>{
 //  v8: ロビーチャット
 // ================================================================
 let _lobbyChatInterval=null;
-let _lobbyChatSeenKeys=new Set(); // v26修正: 既出メッセージの管理を「直前1件のキー」からSetに変更
-
-function _bwFormatChatTime(ts){
-  try{
-    const d=ts?new Date(ts):new Date();
-    return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){ return ''; }
-}
+let _lobbyChatLastTs='';
 
 function startLobbyChatPoll(){
+  if(!window.supabaseClient){ _setSupabaseStatus('Supabase: オフライン','#888'); return; }
   if(_lobbyChatInterval) clearInterval(_lobbyChatInterval);
   _lobbyChatInterval=setInterval(async()=>{
     const res=await sbRequest({action:'getMsgs',scope:'lobby'});
@@ -7254,19 +5483,12 @@ function startLobbyChatPoll(){
     res.msgs.filter(m=>(m.scope||'all')==='lobby'||!m.scope).forEach(m=>{
       const ts=m.ts||'';
       if(!ts) return;
-      const key=m.name+ts+m.msg;
-      // v26修正: 以前は「直前1件のキー」だけを覚えていたため、ポーリングのたびに
-      // 履歴全体(直前以外の全メッセージ)が再度描画され、同じ発言が延々と
-      // 繰り返し表示されるバグになっていた。既出キーをSetで管理して確実に重複排除する。
-      if(_lobbyChatSeenKeys.has(key)) return;
-      _lobbyChatSeenKeys.add(key);
-      // メモリ肥大化防止(古いキーを間引く、目安1000件超で半分にする)
-      if(_lobbyChatSeenKeys.size>1000){
-        const arr=[..._lobbyChatSeenKeys]; _lobbyChatSeenKeys=new Set(arr.slice(arr.length/2));
-      }
+      const key=m.name+ts;
+      if(el.dataset.lastKey===key) return;
+      el.dataset.lastKey=key;
       const div=document.createElement('div');
       div.style.cssText='padding:2px 0;border-bottom:1px solid #1a1a1a;font-size:11px';
-      div.innerHTML=`<span style="color:#666">[${bwEscapeHTML(_bwFormatChatTime(ts))}]</span> <span style="color:${bwSafeColor(m.color)};font-weight:bold">${bwEscapeHTML(m.name)}:</span> ${bwEscapeHTML(m.msg)}`;
+      div.innerHTML=`<span style="color:${_bwSafeColor(m.color,'#ccc')};font-weight:bold">${_bwEscapeHtml(m.name)}:</span> ${_bwEscapeHtml(m.msg)}`;
       el.appendChild(div);
       el.scrollTop=el.scrollHeight;
     });
@@ -7280,16 +5502,12 @@ async function sendLobbyChat(){
   if(!msg) return;
   input.value='';
   const name=document.getElementById('player-name').value.trim()||'Player';
-  const nowTs=new Date().toISOString();
   await sbRequest({action:'postMsg',name,msg:`[ロビー] ${msg}`,color:'#cccccc',pcId:myPeerId,scope:'lobby'});
-  // v26追記: 自分の発言もSetに事前登録しておき、直後のポーリングで
-  // サーバーから返ってきた自分のメッセージが二重表示されないようにする
-  _lobbyChatSeenKeys.add(name+nowTs+`[ロビー] ${msg}`);
   const el=document.getElementById('lobby-chat-log');
   if(el){
     const div=document.createElement('div');
     div.style.cssText='padding:2px 0;font-size:11px;color:#ffff88';
-    div.innerHTML=`<span style="color:#666">[${bwEscapeHTML(_bwFormatChatTime(nowTs))}]</span> <b>${bwEscapeHTML(name)}(自):</b> [ロビー] ${bwEscapeHTML(msg)}`;
+    div.innerHTML=`<b>${_bwEscapeHtml(name)}(自):</b> [ロビー] ${_bwEscapeHtml(msg)}`;
     el.appendChild(div);el.scrollTop=el.scrollHeight;
   }
 }
@@ -7303,8 +5521,11 @@ document.getElementById('lobby-chat-input')?.addEventListener('keydown',e=>{
 window.addEventListener('load',()=>{
   startLobbyChatPoll();
   // 設定を読み込んでカメラ等に反映
-  const saved=localStorage.getItem('bw_settings');
-  if(saved){ currentSettings=JSON.parse(saved); }
+  const saved=_bwSafeJsonParse(bwStorage.get('bw_settings'), null);
+  if(saved && typeof saved==='object'){
+    currentSettings=Object.assign({}, currentSettings, saved);
+    currentSettings.keys=Object.assign({}, DEFAULT_SETTINGS.keys, saved.keys||{});
+  }
 });
 
 // ================================================================
@@ -7371,11 +5592,6 @@ function updateBlockPreview(){
 //  v11: マウスホイールでスロット切替
 // ================================================================
 document.addEventListener('wheel',e=>{
-  if(e.altKey){
-    e.preventDefault();
-    window._bwAltZoom=Math.max(0,Math.min(1,(window._bwAltZoom||0)+(e.deltaY>0?-0.08:0.08)));
-    return;
-  }
   if(!currentSettings.scrollSlot) return;
   if(document.pointerLockElement){
     const dir=e.deltaY>0?1:-1;
@@ -7383,7 +5599,7 @@ document.addEventListener('wheel',e=>{
     updateUI();
     if(typeof _updateHandItem==='function')_updateHandItem();
   }
-},{passive:false});
+});
 
 let _fpsTimes=[]; let _fpsEl=null; let _frameTimeMs=0,_lastFrameTs=performance.now();
 function initFPS(){
@@ -7554,18 +5770,6 @@ initMinimap();
 //  カメラの子要素として追加、アイテム種別ごとに3Dメッシュ
 // ================================================================
 let _handGroup=null, _handMesh=null, _armMesh=null;
-window._handGroup=null;
-setInterval(function(){
-  try{
-    window.scene=scene; window.camera=camera; window.renderer=renderer;
-    window.gameMode=gameMode; window.blockMap=blockMap; window.player=player;
-    window.enemies=enemies; window.drops=drops;
-    window.mpPlayers=mpPlayers; window.mpMeshes=mpMeshes;
-    window.playerMesh3p=playerMesh3p; window._handGroup=_handGroup;
-    window.currentMatchId=currentMatchId; window.activeMenu=activeMenu;
-    window.myPeerId=myPeerId;
-  }catch(e){}
-},300);
 const _DEFAULT_HAND_POS={x:0.45,y:-0.38,z:-0.65};
 
 // アイテム種別ごとの2Dキャンバス描画
@@ -7653,27 +5857,46 @@ function _partTex(ox, oy, w, h, fallbackColor){
   return new THREE.MeshLambertMaterial({map:tex});
 }
 
+function _hookRightArm(){
+  // Compatibility hook used by the older UI bootstrap.
+  // The actual first-person 3D arm is initialized by initRightArm().
+  if(typeof initRightArm==='function') initRightArm();
+}
+
 function initRightArm(){
   if(!camera) return;
+  if(_handGroup){
+    try{camera.remove(_handGroup);}catch(e){}
+    _handGroup=null; _armMesh=null; _handMesh=null;
+  }
   _handGroup=new THREE.Group();
 
-  // 前腕メッシュ（スキンの右腕テクスチャを使用、常時表示）
-  const armGeo=new THREE.BoxGeometry(0.28,0.55,0.28);
-  const armMat=_partTex(44,20,4,12,'#cc9955'); // skin.htmlと同じ右腕UV
-  _armMesh=new THREE.Mesh(armGeo,armMat);
-  _armMesh.position.set(0,-0.15,0.05);
-  _handGroup.add(_armMesh);
+  // Same 64x64 skin UV mapping as the third HTML's player model.
+  // This is a real six-face 3D arm, not a single-textured rectangular prism.
+  if(typeof _createSkinBodyPart==='function'){
+    const skinImg=(typeof _skinImage!=='undefined'&&_skinImage)?_skinImage:_getFallbackSkinImage();
+    const armPart=_createSkinBodyPart(skinImg,40,16,4,12,4,40,32,-6,[]);
+    armPart.scale.set(1/16,1/16,1/16);
+    armPart.position.set(0,-0.08,0.02);
+    armPart.rotation.set(-0.12,0.05,0.02);
+    _armMesh=armPart;
+    _handGroup.add(armPart);
+  }else{
+    const armGeo=new THREE.BoxGeometry(0.28,0.55,0.28);
+    _armMesh=new THREE.Mesh(armGeo,_partTex(44,20,4,12,'#cc9955'));
+    _armMesh.position.set(0,-0.15,0.05);
+    _handGroup.add(_armMesh);
+  }
 
-  // 持ち物メッシュ（腕の先端、常に3D表示。ホットバー選択に連動）
   const geo=new THREE.BoxGeometry(0.35,0.35,0.35);
   const mat=new THREE.MeshLambertMaterial({color:0xffd5a0});
   _handMesh=new THREE.Mesh(geo,mat);
+  _handMesh.name='first-person-held-item';
   _handGroup.add(_handMesh);
 
   _handGroup.position.set(_DEFAULT_HAND_POS.x,_DEFAULT_HAND_POS.y,_DEFAULT_HAND_POS.z);
   _handGroup.rotation.set(0.2,-0.35,0.1);
   camera.add(_handGroup);
-  window._handGroup=_handGroup;
   _updateHandItem();
 }
 
@@ -7712,31 +5935,20 @@ function _updateHandItem(){
 }
 
 function _swingHand(){
-  window._bwArmSwingUntil=Date.now()+280;
-  if(_handGroup){
-    _handGroup.rotation.set(-1.25,-0.15,0.25);
-    _handGroup.position.z=_DEFAULT_HAND_POS.z+0.28;
-    _handGroup.position.y=_DEFAULT_HAND_POS.y-0.06;
-    setTimeout(()=>{
-      if(!_handGroup) return;
-      _handGroup.rotation.set(0.35,-0.4,0.12);
-      _handGroup.position.z=_DEFAULT_HAND_POS.z-0.04;
-    },90);
-    setTimeout(()=>{
-      if(!_handGroup) return;
-      _handGroup.position.set(_DEFAULT_HAND_POS.x,_DEFAULT_HAND_POS.y,_DEFAULT_HAND_POS.z);
-      _handGroup.rotation.set(0.2,-0.35,0.1);
-    },240);
-  }
+  if(!_handGroup) return;
+  _handGroup.rotation.x=-0.9;
+  _handGroup.position.z=_DEFAULT_HAND_POS.z+0.2;
+  setTimeout(()=>{
+    if(!_handGroup) return;
+    _handGroup.position.z=_DEFAULT_HAND_POS.z;
+    _handGroup.rotation.x=0.2;
+  },120);
 }
 
 function _animateHandBob(time){
   if(!_handGroup) return;
-  if(window._bwArmSwingUntil && Date.now()<window._bwArmSwingUntil) return;
   const crouchOffset = player.isCrouching ? -0.05 : 0;
-  const sprint=player.isSprinting?1.8:1;
-  _handGroup.position.y=_DEFAULT_HAND_POS.y+crouchOffset+Math.sin(time*0.004*sprint)*0.014;
-  _handGroup.rotation.z=0.1+Math.sin(time*0.0035*sprint)*0.03;
+  _handGroup.position.y=_DEFAULT_HAND_POS.y+crouchOffset+Math.sin(time*0.003)*0.008;
 }
 
 // ================================================================
@@ -7840,12 +6052,11 @@ function openFriendUI(){
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <button class="mc-btn" onclick="loadFriendTab('friends')" style="flex:1;font-size:14px">🤝 フレンド</button>
       <button class="mc-btn" onclick="loadFriendTab('search')" style="flex:1;font-size:14px">🔍 検索</button>
-      <button class="mc-btn" onclick="loadFriendTab('ranking')" style="flex:1;font-size:14px">🏆 総合</button>
-      <button class="mc-btn" onclick="loadFriendTab('season')" style="flex:1;font-size:14px">🍁 シーズン</button>
+      <button class="mc-btn" onclick="loadFriendTab('ranking')" style="flex:1;font-size:14px">🏆 ランキング</button>
     </div>
     <div id="friend-search-box" style="display:none;margin-bottom:8px">
       <div style="display:flex;gap:6px">
-        <input type="text" id="friend-search-input" placeholder="プレイヤー名で検索..." onkeydown="if(event.key==='Enter')doFriendSearch()" style="flex:1;padding:7px;background:#222;color:#fff;border:1px solid #555;border-radius:3px;font-size:13px;outline:none">
+        <input type="text" id="friend-search-input" placeholder="プレイヤー名で検索..." style="flex:1;padding:7px;background:#222;color:#fff;border:1px solid #555;border-radius:3px;font-size:13px;outline:none">
         <button class="mc-btn" onclick="doFriendSearch()" style="font-size:13px">検索</button>
       </div>
       <div id="friend-search-results" style="margin-top:8px"></div>
@@ -7857,43 +6068,10 @@ function openFriendUI(){
   loadFriendTab('friends');
 }
 
-// v26追記: レベルに応じた20段階のランク称号バッジ(RANKEDゲーム風)
-// 5素材(木/石/鉄/金/ダイヤ/エメラルド/ネザライト...ではなく、木→石→鉄→金→
-// ダイヤ→エメラルド→ネザライトの7素材×各Ⅲ〜Ⅰの3段階=21段階のうち上限20段階を採用
-const BW_RANK_TIERS=(()=>{
-  const materials=[
-    {name:'木',color:'#a97c50',icon:'🪵'},
-    {name:'石',color:'#9a9a9a',icon:'🪨'},
-    {name:'鉄',color:'#dcdcdc',icon:'⛓️'},
-    {name:'金',color:'#ffd700',icon:'🟡'},
-    {name:'ダイヤ',color:'#55e0ff',icon:'💎'},
-    {name:'エメラルド',color:'#33ff88',icon:'💚'},
-    {name:'ネザライト',color:'#6a3a3a',icon:'🖤'},
-  ];
-  const numerals=['Ⅲ','Ⅱ','Ⅰ'];
-  const tiers=[];
-  materials.forEach(m=>{ numerals.forEach((n,ni)=>{ tiers.push({label:m.name+n,color:m.color,icon:m.icon,sub:ni+1}); }); });
-  return tiers; // 全21段階(木Ⅲ〜ネザライトⅠ)。lvが最大を超えたらネザライトⅠ固定。
-})();
-function _bwRankForLevel(level){
-  const lv=Math.max(1,+level||1);
-  // 大まかに5レベルごとに1段階昇格(21段階×5=105レベルでネザライトⅠ到達)
-  const idx=Math.min(BW_RANK_TIERS.length-1, Math.floor((lv-1)/5));
-  return BW_RANK_TIERS[idx];
-}
-function _bwRankBadgeHtml(level){
-  const r=_bwRankForLevel(level);
-  // v26追記: バッジにイラスト(素材アイコン)を追加。ローマ数字の段階は
-  // アイコン下の小さな三角マーカーの数(●●●〜●)でも視覚的に表現する。
-  const dots='●'.repeat(r.sub)+'○'.repeat(3-r.sub);
-  return `<span style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:bold;background:${r.color}22;color:${r.color};border:1px solid ${r.color}66;white-space:nowrap" title="${r.label}">
-    <span style="font-size:12px">${r.icon}</span>${r.label}<span style="font-size:6px;letter-spacing:-1px;opacity:0.8">${dots}</span>
-  </span>`;
-}
-
 function _skinFaceImg(skinDataUrl){
   return new Promise(resolve=>{
-    if(!skinDataUrl){resolve(null);return;}
+    const safe=_bwSafeImageSource(skinDataUrl);
+    if(!safe){resolve(null);return;}
     const img=new Image();
     img.crossOrigin='anonymous';
     img.onload=()=>{
@@ -7905,27 +6083,27 @@ function _skinFaceImg(skinDataUrl){
       }catch(e){resolve(null);}
     };
     img.onerror=()=>resolve(null);
-    img.src=skinDataUrl;
+    img.src=safe;
   });
 }
 
 async function _friendCard(f){
   const tc=f.online?'#55ff55':'#888';
+  const uidArg=_bwEncodeArg(f.uid);
+  const nameArg=_bwEncodeArg(f.name);
   let faceHtml='<div style="width:32px;height:32px;background:#333;border-radius:2px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>';
   if(f.skin){
     const face=await _skinFaceImg(f.skin);
-    if(face) faceHtml=`<img src="${face}" style="width:32px;height:32px;image-rendering:pixelated;border-radius:2px;border:1px solid #555">`;
+    if(face) faceHtml=`<img src="${_bwEscapeHtml(face)}" style="width:32px;height:32px;image-rendering:pixelated;border-radius:2px;border:1px solid #555">`;
   }
   return `<div style="display:flex;align-items:center;gap:10px;padding:7px;border-bottom:1px solid #1e1e1e">
     ${faceHtml}
     <div style="flex:1">
-      <div style="color:#fff;font-weight:bold;font-size:14px">${f.name} ${_bwRankBadgeHtml(f.level)}</div>
+      <div style="color:#fff;font-weight:bold;font-size:14px">${_bwEscapeHtml(f.name)}</div>
       <div style="font-size:11px;color:${tc}">${f.online?'● オンライン':'○ オフライン'}</div>
-      <div style="font-size:11px;color:#888">⚔${f.kills||0} 🏆${f.wins||0} Lv${f.level||1}</div>
+      <div style="font-size:11px;color:#888">⚔${Number(f.kills)||0} 🏆${Number(f.wins)||0} Lv${Number(f.level)||1}</div>
     </div>
-    <button onclick="openFriendChat(${bwJsArg(f.uid)},${bwJsArg(f.name)})" style="padding:3px 8px;background:#225599;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px">チャット</button>
-    <button onclick="window._bwSendDuel(${bwJsArg(f.uid)},${bwJsArg(f.name)})" style="padding:3px 8px;background:#7a3a00;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px">デュエル</button>
-    <button onclick="removeFriendAction(${bwJsArg(f.uid)},${bwJsArg(f.name)})" style="padding:3px 8px;background:#cc3333;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px">削除</button>
+    <button onclick="removeFriendAction(decodeURIComponent('${uidArg}'),decodeURIComponent('${nameArg}'))" style="padding:3px 8px;background:#cc3333;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px">削除</button>
   </div>`;
 }
 
@@ -7936,82 +6114,34 @@ async function loadFriendTab(tab){
   if(sb) sb.style.display=(tab==='search')?'block':'none';
   el.innerHTML='<div style="color:#888;text-align:center;padding:20px">読み込み中...</div>';
 
-  if(tab==='season'){
-    const res=await sbRequest({action:'getSeasonHistory'});
-    if(!res||!res.ok){el.innerHTML='<div style="color:#f55;text-align:center">取得失敗（SQLを実行してください）</div>';return;}
-    const rows=res.history||[];
-    el.innerHTML=`<div style="color:#ffcc66;margin-bottom:8px;text-align:center">${res.seasonLabel||'今シーズン'}</div>`+
-      '<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>'+
-      '<tr style="border-bottom:1px solid #444;color:#ffaa00"><th style="text-align:left;padding:4px">#</th><th style="text-align:left">名前</th><th>⚔</th><th>🏆</th></tr>'+
-      (rows.length?rows.map((p,i)=>`<tr style="border-bottom:1px solid #222"><td style="color:#888;padding:4px">${i+1}</td><td>${bwEscapeHTML(p.name)}</td><td style="color:#f77;text-align:center">${p.kills||0}</td><td style="color:#7f7;text-align:center">${p.wins||0}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:#888;padding:12px">まだ記録がありません</td></tr>')+
-      '</tbody></table>';
-  } else if(tab==='ranking'){
+  if(tab==='ranking'){
     const res=await sbRequest({action:'getHistory'});
     if(!res||!res.ok||!res.history){el.innerHTML='<div style="color:#f55;text-align:center">取得失敗</div>';return;}
-    const rows=res.history.slice(0,20);
-    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px"><tbody>'+
-      '<tr style="border-bottom:1px solid #444;color:#ffaa00"><th style="text-align:left;padding:4px">#</th><th></th><th style="text-align:left">名前/称号</th><th>⚔KILL</th><th>🏆勝利</th><th>Lv</th><th></th></tr>'+
-      rows.map((p,i)=>`<tr id="rank-row-${i}" style="border-bottom:1px solid #222;${p.name===player.name?'background:rgba(255,170,0,0.12)':''}">
+    el.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+      '<tr style="border-bottom:1px solid #444;color:#ffaa00"><th style="text-align:left;padding:4px">#</th><th>名前</th><th>⚔KILL</th><th>🏆勝利</th><th>Lv</th></tr>'+
+      res.history.slice(0,20).map((p,i)=>`<tr style="border-bottom:1px solid #222;${p.name===player.name?'background:rgba(255,170,0,0.12)':''}">
         <td style="color:#888;padding:4px;text-align:center">${i+1}</td>
-        <td style="padding:4px"><span id="rank-face-${i}" style="display:inline-block;width:20px;height:20px;background:#333;border-radius:2px;vertical-align:middle"></span></td>
-        <td style="padding:4px"><span style="color:${p.name===player.name?'#ffaa00':'#ddd'}">${bwEscapeHTML(p.name)}</span><br>${_bwRankBadgeHtml(p.level)}</td>
-        <td style="color:#ff7777;text-align:center">${p.kills}</td>
-        <td style="color:#77ff77;text-align:center">${p.wins}</td>
-        <td style="color:#77ffff;text-align:center">${p.level}</td>
-        <td>${p.uid===myPeerId?'':`<button onclick="addFriendAction(${bwJsArg(p.uid)},${bwJsArg(p.name)})" style="padding:2px 7px;background:#225599;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px">+追加</button>`}</td>
-      </tr>`).join('')+'</tbody></table>';
-    // v26追記: ランキングにもスキンの頭アイコンを表示(非同期取得後に差し替え)
-    rows.forEach(async(p,i)=>{
-      if(!p.skin) return;
-      const face=await _skinFaceImg(p.skin);
-      const elFace=document.getElementById('rank-face-'+i);
-      if(face&&elFace) elFace.outerHTML=`<img src="${face}" style="width:20px;height:20px;image-rendering:pixelated;border-radius:2px;vertical-align:middle">`;
-    });
+        <td style="color:${p.name===player.name?'#ffaa00':'#ddd'};padding:4px">${_bwEscapeHtml(p.name)}</td>
+        <td style="color:#ff7777;text-align:center">${Number(p.kills)||0}</td>
+        <td style="color:#77ff77;text-align:center">${Number(p.wins)||0}</td>
+        <td style="color:#77ffff;text-align:center">${Number(p.level)||1}</td>
+      </tr>`).join('')+'</table>';
 
   } else if(tab==='friends'){
     const res=await sbRequest({action:'getFriends',uid:myPeerId});
-    let friends;
-    if(!res||!res.ok){
-      // v26追記: Supabase取得に失敗した場合、localStorageにキャッシュしておいた
-      // 前回のフレンド一覧を代わりに表示する(オフライン/通信エラー時の保険)。
-      const cached=_bwLoadCachedFriends();
-      if(cached&&cached.length){
-        friends=cached;
-        el.innerHTML='<div style="color:#f90;font-size:11px;margin-bottom:6px">⚠ 通信エラーのため前回のキャッシュを表示中</div>';
-      } else {
-        el.innerHTML='<div style="color:#f55;text-align:center">取得失敗</div>';
-        return;
-      }
-    } else {
-      friends=res.friends||[];
-      _bwSaveCachedFriends(friends); // v26追記: 取得成功時にlocalStorageへ保存
-    }
+    if(!res||!res.ok){el.innerHTML='<div style="color:#f55;text-align:center">取得失敗</div>';return;}
+    const friends=res.friends||[];
     if(!friends.length){
       el.innerHTML='<div style="color:#888;text-align:center;padding:20px">フレンドがいません<br><small style="color:#666">「検索」タブでプレイヤーを検索して追加しましょう</small></div>';
       return;
     }
-    el.innerHTML=(el.innerHTML.includes('通信エラー')?el.innerHTML:'')+'<div style="color:#888;font-size:11px;margin-bottom:6px">フレンド '+friends.length+'人</div>';
+    el.innerHTML='<div style="color:#888;font-size:11px;margin-bottom:6px">フレンド '+friends.length+'人</div>';
     const cards=await Promise.all(friends.map(f=>_friendCard(f)));
     el.innerHTML+='<div>'+cards.join('')+'</div>';
 
   } else if(tab==='search'){
     el.innerHTML='<div style="color:#888;text-align:center;padding:12px">プレイヤー名を入力して検索してください</div>';
   }
-}
-
-// v26追記: フレンド一覧のlocalStorageキャッシュ(uidごとに保存し、複数アカウントでの
-// テストプレイでも混ざらないようにする)
-function _bwFriendCacheKey(){ return 'bw_friends_cache_'+myPeerId; }
-function _bwSaveCachedFriends(friends){
-  try{ localStorage.setItem(_bwFriendCacheKey(), JSON.stringify({ts:Date.now(),friends})); }catch(e){}
-}
-function _bwLoadCachedFriends(){
-  try{
-    const raw=localStorage.getItem(_bwFriendCacheKey());
-    if(!raw) return null;
-    const parsed=JSON.parse(raw);
-    return parsed?.friends||null;
-  }catch(e){ return null; }
 }
 
 async function doFriendSearch(){
@@ -8021,119 +6151,34 @@ async function doFriendSearch(){
   const kw=inp.value.trim();
   if(!kw){res2.innerHTML='<div style="color:#f55;font-size:12px">キーワードを入力してください</div>';return;}
   res2.innerHTML='<div style="color:#888;font-size:12px">検索中...</div>';
-  let res=await sbRequest({action:'searchPlayers',uid:myPeerId,keyword:kw});
-  if(!res||!res.ok){
-    // v26追記: エラー内容を隠さずそのまま表示(原因切り分け用)
-    res2.innerHTML=`<div style="color:#f55;font-size:12px">検索失敗: ${res?.error||'不明なエラー'}</div>`;
-    return;
-  }
-  if(!res.results||!res.results.length){
-    // v26追記: サーバー側ilikeで0件だった場合のフォールバック。
-    // getHistory(ランキングと同じ全件取得)を使い、クライアント側で
-    // 大文字小文字を無視した部分一致フィルタをかける。ランキングでは
-    // 見えるのに検索では出てこない、という食い違いを吸収するための保険。
-    const all=await sbRequest({action:'getHistory'});
-    if(all&&all.ok&&all.history){
-      const kwLower=kw.toLowerCase();
-      res={ok:true,results:all.history.filter(p=>p.uid!==myPeerId&&(p.name||'').toLowerCase().includes(kwLower))};
-    }
-  }
+  const res=await sbRequest({action:'searchPlayers',uid:myPeerId,keyword:kw});
+  if(!res||!res.ok){res2.innerHTML='<div style="color:#f55;font-size:12px">検索失敗</div>';return;}
   if(!res.results||!res.results.length){res2.innerHTML='<div style="color:#888;font-size:12px">見つかりませんでした</div>';return;}
-  res2.innerHTML=res.results.map((p,i)=>`
+  res2.innerHTML=res.results.map(p=>{
+    const uidArg=_bwEncodeArg(p.uid);
+    const nameArg=_bwEncodeArg(p.name);
+    return `
     <div style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #222">
-      <span id="search-face-${i}" style="display:inline-block;width:24px;height:24px;background:#333;border-radius:2px"></span>
       <div style="flex:1">
-        <div><span style="color:#fff;font-weight:bold">${bwEscapeHTML(p.name)}</span> ${_bwRankBadgeHtml(p.level)}</div>
-        <span style="color:#888;font-size:11px">⚔${p.kills||0} Lv${p.level||1}</span>
+        <span style="color:#fff;font-weight:bold">${_bwEscapeHtml(p.name)}</span>
+        <span style="color:#888;font-size:11px;margin-left:6px">⚔${Number(p.kills)||0} Lv${Number(p.level)||1}</span>
       </div>
-      <button onclick="addFriendAction(${bwJsArg(p.uid)},${bwJsArg(p.name)})" style="padding:4px 10px;background:#225599;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:12px">+追加</button>
-    </div>`).join('');
-  res.results.forEach(async(p,i)=>{
-    if(!p.skin) return;
-    const face=await _skinFaceImg(p.skin);
-    const elFace=document.getElementById('search-face-'+i);
-    if(face&&elFace) elFace.outerHTML=`<img src="${face}" style="width:24px;height:24px;image-rendering:pixelated;border-radius:2px">`;
-  });
+      <button onclick="addFriendAction(decodeURIComponent('${uidArg}'),decodeURIComponent('${nameArg}'))" style="padding:4px 10px;background:#225599;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:12px">+追加</button>
+    </div>`;
+  }).join('');
 }
 
 async function addFriendAction(uid,name){
   const res=await sbRequest({action:'addFriend',uid:myPeerId,targetUid:uid,targetName:name});
-  if(res&&res.ok){
-    announce('✅ '+name+' をフレンド追加しました','#55ff55');
-    // v26追記: サーバー確定を待たずキャッシュにも即反映(次回オフライン表示の保険)
-    const cached=_bwLoadCachedFriends()||[];
-    if(!cached.some(f=>f.uid===uid)) _bwSaveCachedFriends([...cached,{uid,name,kills:0,wins:0,level:1,skin:'',online:false}]);
-    loadFriendTab('friends');
-  }
+  if(res&&res.ok){announce('✅ '+name+' をフレンド追加しました','#55ff55');loadFriendTab('friends');}
   else announce('⚠️ '+(res?.error||'追加失敗'),'#ff5555');
 }
 
 async function removeFriendAction(uid,name){
   if(!confirm(name+' をフレンドから削除しますか？'))return;
   const res=await sbRequest({action:'removeFriend',uid:myPeerId,targetUid:uid});
-  if(res&&res.ok){
-    announce('🗑 '+name+' を削除しました','#ffaa00');
-    const cached=_bwLoadCachedFriends()||[];
-    _bwSaveCachedFriends(cached.filter(f=>f.uid!==uid));
-    loadFriendTab('friends');
-  }
+  if(res&&res.ok){announce('🗑 '+name+' を削除しました','#ffaa00');loadFriendTab('friends');}
 }
-
-window._bwFriendChatTarget=null;
-async function openFriendChat(uid,name){
-  window._bwFriendChatTarget={uid,name};
-  let box=document.getElementById('bw-friend-chat');
-  if(!box){
-    box=document.createElement('div');
-    box.id='bw-friend-chat';
-    box.style.cssText='position:fixed;right:16px;bottom:16px;width:280px;z-index:2600;background:#111;border:2px solid #555;padding:8px;border-radius:6px';
-    document.body.appendChild(box);
-  }
-  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-    <b style="color:#ffaa00;font-size:13px">💬 ${name}</b>
-    <button onclick="document.getElementById('bw-friend-chat').remove()" style="background:#633;color:#fff;border:0;padding:2px 6px;cursor:pointer">✕</button>
-  </div>
-  <div id="bw-friend-chat-log" style="height:140px;overflow-y:auto;background:#0a0a0a;border:1px solid #333;padding:6px;font-size:12px;color:#ddd"></div>
-  <div style="display:flex;gap:4px;margin-top:6px">
-    <input id="bw-friend-chat-input" placeholder="フレンドだけに送信" style="flex:1;padding:5px;background:#222;color:#fff;border:1px solid #444;font-size:12px" onkeydown="if(event.key==='Enter')sendFriendChat()">
-    <button class="mc-btn" style="padding:4px 8px;font-size:12px" onclick="sendFriendChat()">送信</button>
-  </div>`;
-  await refreshFriendChat();
-}
-async function refreshFriendChat(){
-  const t=window._bwFriendChatTarget; if(!t) return;
-  const log=document.getElementById('bw-friend-chat-log'); if(!log) return;
-  const res=await sbRequest({action:'getFriendChat',uid:myPeerId,targetUid:t.uid});
-  if(!res||!res.ok){ log.textContent='取得失敗'; return; }
-  log.innerHTML=(res.msgs||[]).map(m=>`<div style="margin:3px 0"><b style="color:${m.uid===myPeerId?'#ffaa00':'#88ccff'}">${bwEscapeHTML(m.name)}</b> ${bwEscapeHTML(m.msg)}</div>`).join('')||'<div style="color:#666">まだメッセージがありません</div>';
-  log.scrollTop=log.scrollHeight;
-}
-async function sendFriendChat(){
-  const t=window._bwFriendChatTarget; if(!t) return;
-  const inp=document.getElementById('bw-friend-chat-input');
-  const msg=(inp?.value||'').trim(); if(!msg) return;
-  const res=await sbRequest({action:'postFriendChat',uid:myPeerId,targetUid:t.uid,name:player?.name||playerName,msg});
-  if(res&&res.ok){ inp.value=''; await refreshFriendChat(); }
-}
-
-async function _bwHeartbeat(){
-  try{
-    const name=(typeof player!=='undefined'&&player?.name)||document.getElementById('player-name')?.value||playerName||'Player';
-    await sbRequest({action:'heartbeat',uid:myPeerId,name});
-  }catch(e){}
-}
-async function _bwRefreshOnlineList(){
-  const el=document.getElementById('bw-online-list'); if(!el) return;
-  try{
-    const res=await sbRequest({action:'getOnline'});
-    if(!res||!res.ok){ el.textContent='オンライン情報を取得できません'; return; }
-    const list=res.players||[];
-    if(!list.length){ el.textContent='他にオンラインのプレイヤーはいません'; return; }
-    el.innerHTML=list.map(p=>`<div style="padding:2px 0">● ${bwEscapeHTML(p.name||'Player')}</div>`).join('');
-  }catch(e){ el.textContent='オンライン情報を取得できません'; }
-}
-setInterval(()=>{ _bwHeartbeat(); _bwRefreshOnlineList(); },8000);
-window.addEventListener('load',()=>{ setTimeout(()=>{ _bwHeartbeat(); _bwRefreshOnlineList(); },800); });
 
 
 // ロビー画面にフレンドボタン追加
@@ -8150,8 +6195,7 @@ window.addEventListener('load',()=>{
       if(lp) lp.appendChild(btn);
     }
     initFPS();
-    // v26修正: 未定義の_hookRightArm()呼び出し(ReferenceErrorでクラッシュしていた)を削除。
-    // 右腕の初期化は startGamePlay 内で initRightArm() として正しく呼ばれている。
+    _hookRightArm();
   },500);
 });
 
@@ -8173,1680 +6217,3 @@ function enforceWorldLimit(){
     }
   }
 }
-</script>
-
-<style id="v22-part2-style">
-/* ===== v22 後半: Debug / Training / Item preview ===== */
-#v22-debug-panel{
-  position:fixed;left:10px;top:90px;z-index:1200;display:none;
-  min-width:290px;max-width:390px;padding:10px;
-  background:rgba(5,8,12,.88);border:2px solid #55ffff;color:#dff;
-  font:12px monospace;white-space:pre;pointer-events:none;
-}
-#v22-training-panel{
-  position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
-  z-index:1100;display:none;background:rgba(0,0,0,.82);
-  border:2px solid #ffaa00;padding:8px 14px;text-align:center;
-  font:14px monospace;color:#fff;min-width:360px;
-}
-#v22-training-panel .record{color:#55ffff}
-#v22-training-panel .best{color:#55ff55}
-#v22-bot-skin-row{
-  margin-top:10px;padding:8px;border:1px solid #444;background:#111;
-}
-#v22-bot-skin-row input{max-width:100%;font-size:11px}
-#v22-item-display{
-  position:fixed;right:18px;bottom:96px;z-index:115;display:none;
-  width:90px;height:90px;pointer-events:none;
-}
-</style>
-
-<script id="v22-part2">
-window.scene=window.scene||null;
-window.gameMode=window.gameMode??null;
-window.blockMap=window.blockMap||null;
-window.player=window.player||null;
-window.enemies=window.enemies||[];
-(function(){
-'use strict';
-function _bwPull(){
-  try{
-    scene=window.scene;
-    camera=window.camera;
-    renderer=window.renderer;
-    player=window.player;
-    gameMode=window.gameMode;
-    blockMap=window.blockMap;
-    enemies=window.enemies;
-    drops=window.drops;
-    mpPlayers=window.mpPlayers;
-    mpMeshes=window.mpMeshes;
-    playerMesh3p=window.playerMesh3p;
-    _handGroup=window._handGroup;
-    currentMatchId=window.currentMatchId;
-    activeMenu=window.activeMenu;
-  }catch(e){}
-}
-var scene,camera,renderer,player,gameMode,blockMap,enemies,drops,mpPlayers,mpMeshes,playerMesh3p,_handGroup,currentMatchId,activeMenu;
-_bwPull();
-setInterval(_bwPull,250);
-
-/* ---------------------------------------------------------------
-   1. スキン向き修正
-   v22前半では modelGroup.rotation.y=Math.PI になっていたため、
-   skin_view.html の座標系をそのまま使い、固定180度反転を解除。
-   物理・座標計算には触れない。
----------------------------------------------------------------- */
-const _v22OldCreateSkin = window.createSimplePlayerMesh;
-if(typeof _v22OldCreateSkin==='function' && !window.__v22SkinFixed){
-  window.__v22SkinFixed=true;
-  window.createSimplePlayerMesh=function(color,img){
-    const m=_v22OldCreateSkin(color,img);
-    const model=m?.children?.find(c=>c?.type==='Group' && c!==m);
-    if(model) model.rotation.y=(m.userData&&m.userData._aiFace)?0:Math.PI;
-    return m;
-  };
-}
-
-/* ---------------------------------------------------------------
-   2. BOT専用スキン
-   プレイヤーのスキンを参照しない。設定からPNGを読み込み、
-   localStorageへ保存。spawnAI内部のDream fallbackへ差し込む。
----------------------------------------------------------------- */
-let _v22BotSkinData=localStorage.getItem('bw_bot_skin')||'';
-let _v22BotSkinImage=null;
-
-function _v22LoadBotSkin(data,cb){
-  if(!data){cb&&cb();return;}
-  const img=new Image();
-  img.onload=()=>{_v22BotSkinImage=img;cb&&cb();};
-  img.onerror=()=>{_v22BotSkinImage=null;cb&&cb();};
-  img.src=data;
-}
-
-if(_v22BotSkinData) _v22LoadBotSkin(_v22BotSkinData);
-
-function _v22BuildBotSkinUI(){
-  const settings=document.getElementById('settings-panel');
-  if(!settings || document.getElementById('v22-bot-skin-row')) return;
-  const cols=settings.querySelectorAll('div[style*="display:grid"]');
-  const target=cols.length?cols[cols.length-1]:settings;
-  const row=document.createElement('div');
-  row.id='v22-bot-skin-row';
-  row.innerHTML=`
-    <div style="color:#ffaa00;font-size:14px;margin-bottom:5px">🤖 BOT専用スキン</div>
-    <div style="color:#999;font-size:11px;margin-bottom:6px">
-      プレイヤーのスキンとは独立しています。PNGを選ぶと、以後のBOTに使用します。
-    </div>
-    <input id="v22-bot-skin-file" type="file" accept="image/png">
-    <button class="mc-btn" id="v22-bot-skin-clear" style="font-size:12px;padding:4px 9px">デフォルトに戻す</button>
-    <span id="v22-bot-skin-status" style="font-size:11px;color:#55ff55;margin-left:6px"></span>`;
-  target.appendChild(row);
-  row.querySelector('#v22-bot-skin-file').addEventListener('change',e=>{
-    const f=e.target.files?.[0]; if(!f)return;
-    const rd=new FileReader();
-    rd.onload=ev=>{
-      _v22BotSkinData=String(ev.target.result);
-      localStorage.setItem('bw_bot_skin',_v22BotSkinData);
-      _v22LoadBotSkin(_v22BotSkinData,()=>{
-        row.querySelector('#v22-bot-skin-status').textContent='読み込み済み';
-        announce('🤖 BOTスキンを更新しました','#55ffff');
-      });
-    };
-    rd.readAsDataURL(f);
-  });
-  row.querySelector('#v22-bot-skin-clear').onclick=()=>{
-    _v22BotSkinData='';_v22BotSkinImage=null;
-    localStorage.removeItem('bw_bot_skin');
-    row.querySelector('#v22-bot-skin-status').textContent='デフォルト';
-    announce('🤖 BOTスキンをデフォルトへ戻しました','#ffaa00');
-  };
-}
-window.addEventListener('load',()=>setTimeout(_v22BuildBotSkinUI,600));
-
-/* spawnAI前にBOTスキンを差し込む。元のAIロジックは維持。 */
-const _v22OldLoadDream=window._loadDreamSkin;
-if(typeof _v22OldLoadDream==='function' && !window.__v22BotHook){
-  window.__v22BotHook=true;
-  window._loadDreamSkin=function(cb){
-    if(_v22BotSkinImage){
-      window._dreamSkinImage=_v22BotSkinImage;
-      cb&&cb();
-      return;
-    }
-    _v22OldLoadDream(cb);
-  };
-}
-
-/* ---------------------------------------------------------------
-   3. デバッグ表示
-   設定の「FPS/座標表示」と独立して、詳細デバッグを任意で表示。
----------------------------------------------------------------- */
-let _v22Debug=false;
-function _v22DebugPanel(){
-  let p=document.getElementById('v22-debug-panel');
-  if(!p){
-    p=document.createElement('div');p.id='v22-debug-panel';document.body.appendChild(p);
-  }
-  p.style.display=_v22Debug?'block':'none';
-}
-function _v22UpdateDebug(){
-  if(!_v22Debug)return;
-  const p=document.getElementById('v22-debug-panel');if(!p)return;
-  const vel=player?.vel?`${player.vel.x.toFixed(3)}, ${player.vel.y.toFixed(3)}, ${player.vel.z.toFixed(3)}`:'-';
-  const item=player?.inv?.[player.selectedIdx];
-  const rt=typeof _supabaseRealtimeChannels!=='undefined'?_supabaseRealtimeChannels.length:0;
-  const dropsN=typeof drops!=='undefined'?drops.length:0;
-  p.textContent=
-`V22 DEBUG
-Mode: ${gameMode}
-Match: ${currentMatchId||'-'}
-Theme: ${currentMapTheme}
-Seed: ${currentMapSeed||0}
-Player: ${player.name}
-XYZ: ${player.pos.x.toFixed(3)} / ${player.pos.y.toFixed(3)} / ${player.pos.z.toFixed(3)}
-Yaw/Pitch: ${(controls.yaw*180/Math.PI).toFixed(1)} / ${(controls.pitch*180/Math.PI).toFixed(1)}
-Head: ${player.isCrouching?'CROUCH':'STAND'} ${player.isSprinting?'SPRINT':''} ${player.isDead?'DEAD':''}
-Vel: ${vel}
-HP: ${Math.ceil(player.hp)}/${Math.ceil(player.maxHp)}
-Held: ${item?.type||'-'} x${item?.count||0}
-MP: ${Object.keys(mpPlayers||{}).length}
-AI: ${typeof enemies!=='undefined'?enemies.length:0}
-Drops: ${dropsN}
-Blocks: ${typeof blockMap!=='undefined'?blockMap.size:0}
-Realtime channels: ${rt}
-FOV: ${camera?.fov?.toFixed(1)||'-'}`;
-}
-setInterval(_v22UpdateDebug,250);
-
-/* ---------------------------------------------------------------
-   4. 対戦中ショートカット
-   デフォルト:
-   V = FOV切替
-   F3 = 詳細デバッグ
-   設定で変更可能な既存keybindにも対応。
----------------------------------------------------------------- */
-const _v22Fovs=[60,70,80,90,100,110];
-let _v22FovIdx=1;
-function _v22CycleFov(){
-  _v22FovIdx=(_v22FovIdx+1)%_v22Fovs.length;
-  const f=_v22Fovs[_v22FovIdx];
-  if(typeof currentSettings!=='undefined'){
-    currentSettings.fov=f;
-    const el=document.getElementById('set-fov');if(el)el.value=f;
-    const lb=document.getElementById('lbl-fov');if(lb)lb.textContent=f;
-    if(typeof applySettingEffects==='function')applySettingEffects();
-  }
-  announce(`👁 FOV ${f}°`,'#55ffff');
-}
-document.addEventListener('keydown',e=>{
-  if(e.repeat)return;
-  if(typeof _bwIsTypingTarget==='function' && _bwIsTypingTarget(e.target)) return;
-  if(typeof gameMode==='undefined' || gameMode==='lobby' || !gameMode) return;
-  if(e.code==='F3'){
-    _v22Debug=!_v22Debug;_v22DebugPanel();
-    return;
-  }
-  const fovKey=(typeof currentSettings!=='undefined'&&currentSettings.keys?.toggleFov)||'KeyV';
-  const dbgKey=(typeof currentSettings!=='undefined'&&currentSettings.keys?.toggleDebug)||'F3';
-  if(e.code===fovKey){e.preventDefault();_v22CycleFov();}
-  if(e.code===dbgKey && dbgKey!=='F3'){e.preventDefault();_v22Debug=!_v22Debug;_v22DebugPanel();}
-});
-
-/* ---------------------------------------------------------------
-   5. バイオーム強化
-   既存のcreateWorldを残し、その後に「中央〜中間帯」へ
-   テーマ固有の地形/構造物を追加する。Seed生成をそのまま利用。
----------------------------------------------------------------- */
-function _v22Add(x,y,z,type){
-  if(typeof blockMap==='undefined'||typeof addBlock!=='function')return;
-  const k=blockKey(x,y,z);
-  if(!blockMap.has(k))addBlock(x,y,z,type,false);
-}
-function _v22BiomeLandmarks(){
-  const t=currentMapTheme, y=61;
-  const add=_v22Add;
-  const ring=[
-    [-22,-10],[-10,-22],[22,10],[10,22],
-    [-22,10],[-10,22],[22,-10],[10,-22]
-  ];
-  if(t==='grassland'){
-    // 小さな丘・石橋・遺跡
-    ring.slice(0,4).forEach(([x,z],i)=>{
-      const h=2+(i%3);
-      for(let yy=0;yy<h;yy++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)
-        if(Math.abs(dx)+Math.abs(dz)<2)add(x+dx,y+yy,z+dz,yy===h-1?'grass':'stone');
-    });
-    for(let x=-20;x<=20;x+=2)add(x,y,Math.round(Math.sin(x*.25)*4),'cobblestone');
-  }else if(t==='desert'){
-    // 砂丘・峡谷・小神殿
-    for(let i=0;i<5;i++){
-      const cx=-20+i*10,cz=Math.round(Math.sin(i*1.7)*12);
-      for(let r=0;r<4;r++)for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++)
-        if(Math.abs(x)+Math.abs(z)<=r+1)add(cx+x,y+r,cz+z,r%2?'sand':'sandstone');
-    }
-    const cx=18,cz=-15;
-    for(let h=0;h<5;h++)for(let x=-3+h/2;x<=3-h/2;x++)for(let z=-3+h/2;z<=3-h/2;z++)
-      if(Math.abs(x)>1||Math.abs(z)>1)add(Math.round(cx+x),y+h,Math.round(cz+z),'sandstone');
-  }else if(t==='snow'){
-    // 樹氷群 + 氷のアーチ
-    [[-20,-12],[-12,20],[20,12],[12,-20]].forEach(([cx,cz],i)=>{
-      const h=7+i%3;
-      for(let yy=0;yy<h;yy++){
-        const r=Math.max(0,Math.floor((h-yy)/3));
-        for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++)add(cx+x,y+yy,cz+z,'packed_ice');
-      }
-    });
-    for(let x=-7;x<=7;x++)add(x,y+3,20-Math.abs(x),'ice');
-  }else if(t==='nether'){
-    // 玄武岩風の柱・魂の砂地帯
-    [[-20,-12],[-12,20],[20,12],[12,-20]].forEach(([cx,cz],i)=>{
-      const h=5+i%4;
-      for(let yy=0;yy<h;yy++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)
-        add(cx+dx,y+yy,cz+dz,yy%2?'netherrack':'nether_brick');
-    });
-    for(let x=-18;x<=18;x+=2)add(x,y,Math.round(Math.sin(x*.3)*6),'soul_sand');
-  }else if(t==='end'){
-    // 浮遊感のある柱列・空洞を意識した遺跡
-    [[-20,-14],[-14,20],[20,14],[14,-20]].forEach(([cx,cz],i)=>{
-      const h=8+i%4;
-      for(let yy=0;yy<h;yy++){
-        const r=Math.max(0,2-Math.floor(yy/4));
-        for(let x=-r;x<=r;x++)for(let z=-r;z<=r;z++)add(cx+x,y+yy,cz+z,'end');
-      }
-      add(cx,y+h,cz,'emerald');
-    });
-    for(let x=-16;x<=16;x+=2)add(x,y,Math.round(Math.cos(x*.35)*10),'end');
-  }else if(t==='mushroom'){
-    // 巨大キノコの森と段丘
-    [[-20,-10],[-10,20],[20,10],[10,-20]].forEach(([cx,cz],i)=>{
-      const h=6+i%3;
-      for(let yy=0;yy<h;yy++)add(cx,y+yy,cz,'log');
-      for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++)
-        if(dx*dx+dz*dz<=16)add(cx+dx,y+h,cz+dz,i%2?'wool_red':'mycelium');
-    });
-  }else if(t==='mesa'){
-    // メサの層状峡谷と岩柱
-    [[-20,-12],[-12,20],[20,12],[12,-20]].forEach(([cx,cz],i)=>{
-      const h=8+i%4;
-      for(let yy=0;yy<h;yy++)for(let dx=-2;dx<=2;dx++)
-        add(cx+dx,y+yy,cz,yy%3===0?'red_sand':'terracotta');
-    });
-    for(let x=-18;x<=18;x+=2){
-      const z=Math.round(Math.sin(x*.25)*7);
-      add(x,y,z,'terracotta');add(x,y+1,z,'red_sand');
-    }
-  }
-}
-const _v22OldCreateWorld=window.createWorld;
-if(typeof _v22OldCreateWorld==='function' && !window.__v22WorldHook){
-  window.__v22WorldHook=true;
-  window.createWorld=function(){
-    const r=_v22OldCreateWorld.apply(this,arguments);
-    if(gameMode!=='training_bridge'&&gameMode!=='training_parkour')_v22BiomeLandmarks();
-    return r;
-  };
-}
-
-/* ---------------------------------------------------------------
-   6. 練習場を再構築
-   - 複雑なルート
-   - 安全なリスポーン土台
-   - 記録/ベスト記録
-   - リスポーン時に必ず安全床へ戻す
----------------------------------------------------------------- */
-let _v22Training={
-  type:null,start:0,attempt:0,deaths:0,best:null,
-  spawn:new THREE.Vector3(),startPos:new THREE.Vector3(),
-  courseEnd:new THREE.Vector3()
-};
-function _v22TrainingKey(type){return 'bw_training_'+type+'_best';}
-function _v22TrainingLoadBest(type){
-  const v=Number(localStorage.getItem(_v22TrainingKey(type))||0);
-  return v>0?v:null;
-}
-function _v22TrainingSave(type,ms){
-  const key=_v22TrainingKey(type),old=_v22TrainingLoadBest(type);
-  if(!old||ms<old){localStorage.setItem(key,String(ms));return true;}
-  return false;
-}
-function _v22TrainingHud(){
-  let p=document.getElementById('v22-training-panel');
-  if(!p){p=document.createElement('div');p.id='v22-training-panel';document.body.appendChild(p);}
-  const type=_v22Training.type==='bridge'?'🧱 ブリッジ':'🏃 パルクール';
-  const elapsed=_v22Training.start?((performance.now()-_v22Training.start)/1000):0;
-  const best=_v22Training.best?(_v22Training.best/1000).toFixed(3)+'s':'--';
-  p.style.display='block';
-  p.innerHTML=`<b>${type}練習</b>　試行 ${_v22Training.attempt}　死亡 ${_v22Training.deaths}<br>
-    <span class="record">TIME ${elapsed.toFixed(3)}s</span>　
-    <span class="best">BEST ${best}</span><br>
-    <small>リスポーンは必ずスタート土台へ戻ります</small>`;
-}
-function _v22FinishTraining(){
-  if(!_v22Training.start)return;
-  const ms=Math.round(performance.now()-_v22Training.start);
-  const newBest=_v22TrainingSave(_v22Training.type,ms);
-  _v22Training.best=_v22TrainingLoadBest(_v22Training.type);
-  announce(newBest?`🏆 NEW BEST ${(ms/1000).toFixed(3)}s`:`⏱ ${(ms/1000).toFixed(3)}s`,newBest?'#55ff55':'#55ffff');
-  _v22Training.start=performance.now();
-  _v22Training.attempt++;
-}
-function _v22SafeTrainingRespawn(){
-  if(!_v22Training.type)return false;
-  player.isDead=false;player.spectatorMode=false;player.spectatorTime=0;
-  player.hp=player.maxHp;player.hunger=20;player.vel.set(0,0,0);
-  player.pos.copy(_v22Training.spawn);
-  player.respawnProtection=1.2;
-  _v22Training.deaths++;
-  _v22Training.start=performance.now();
-  _v22Training.attempt++;
-  _v22TrainingHud();
-  return true;
-}
-function _v22CreateTrainingWorld(type){
-  const baseY=60;
-  // 広い安全なスタート土台
-  for(let x=-14;x<=-5;x++)for(let z=-5;z<=5;z++)addBlock(x,baseY,z,'stone',false);
-  _v22Training.type=type;
-  _v22Training.spawn.set(-9,baseY+1.05,0);
-  _v22Training.startPos.copy(_v22Training.spawn);
-  _v22Training.attempt=1;_v22Training.deaths=0;_v22Training.best=_v22TrainingLoadBest(type);
-  _v22Training.start=performance.now();
-
-  if(type==='bridge'){
-    // 3種類のブリッジ: 直線/蛇行/高さ変化
-    for(let x=-4;x<=34;x++){
-      const z=Math.round(Math.sin(x*.35)*2);
-      const y=baseY+1+Math.floor(Math.max(0,x-10)/12);
-      addBlock(x,y,z,'wool_blue',false);
-      if(x%6===0)for(let dz=-1;dz<=1;dz++)addBlock(x,y,z+dz,'stone',false);
-    }
-    for(let x=6;x<=26;x+=4){
-      const y=baseY+2+Math.floor((x-6)/8);
-      addBlock(x,y,6,'wool_green',false);
-      if(x<24)addBlock(x+1,y+1,6,'wool_green',false);
-    }
-    _v22Training.courseEnd.set(34,baseY+2,0);
-  }else{
-    // パルクール: 高低差、横ずれ、階段、ギャップを組み合わせる
-    const pads=[
-      [-3,1,0,1],[0,2,2,1],[3,3,-1,1],[6,4,2,1],
-      [9,5,-2,1],[12,6,1,1],[15,5,4,2],[19,7,1,1],
-      [23,8,-2,1],[27,9,2,2],[31,10,0,2]
-    ];
-    pads.forEach(([x,dy,z,r],i)=>{
-      for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)
-        addBlock(x+dx,baseY+dy,z+dz,i%3===0?'wool_green':'stone',false);
-    });
-    _v22Training.courseEnd.set(31,baseY+11,0);
-  }
-  player.pos.copy(_v22Training.spawn);player.vel.set(0,0,0);
-  let p=document.getElementById('training-hud');if(p)p.remove();
-  _v22TrainingHud();
-}
-const _v22OldCreateTraining=window.createTrainingWorld;
-if(typeof _v22OldCreateTraining==='function' && !window.__v22TrainingHook){
-  window.__v22TrainingHook=true;
-  window.createTrainingWorld=function(type){
-    // 既存の練習場生成を使わず、後半版へ置換
-    _v22CreateTrainingWorld(type);
-  };
-}
-
-/* startTrainingは既存を利用し、開始後に記録HUDを初期化 */
-const _v22OldStartTraining=window.startTraining;
-if(typeof _v22OldStartTraining==='function'&&!window.__v22StartTrainingHook){
-  window.__v22StartTrainingHook=true;
-  window.startTraining=function(type){
-    _v22OldStartTraining(type);
-    setTimeout(()=>{_v22Training.type=type;_v22Training.best=_v22TrainingLoadBest(type);_v22Training.start=performance.now();_v22Training.attempt=1;_v22Training.deaths=0;_v22TrainingHud();},350);
-  };
-}
-
-/* 練習場でのrespawnを安全化 */
-const _v22OldRespawn=window.respawn;
-if(typeof _v22OldRespawn==='function'&&!window.__v22RespawnHook){
-  window.__v22RespawnHook=true;
-  window.respawn=function(){
-    if(_v22Training.type){_v22SafeTrainingRespawn();return;}
-    _v22OldRespawn();
-  };
-}
-
-/* ゴール判定: プレイヤーが終点付近へ到達したら記録 */
-setInterval(()=>{
-  if(!_v22Training.type||!scene||gameMode!=='training_bridge'&&gameMode!=='training_parkour')return;
-  const d=player.pos.distanceTo(_v22Training.courseEnd);
-  if(d<2.4){
-    _v22FinishTraining();
-    // ゴール地点から安全にスタートへ戻す
-    player.pos.copy(_v22Training.spawn);player.vel.set(0,0,0);
-  }
-  _v22TrainingHud();
-},100);
-
-/* 奈落/死亡時に練習場なら即座に安全リスポーン */
-setInterval(()=>{
-  if(!_v22Training.type)return;
-  if(gameMode!=='training_bridge'&&gameMode!=='training_parkour')return;
-  if(player.pos.y<45){
-    _v22SafeTrainingRespawn();
-    announce('↩ スタート地点へリスポーン','#ffaa00');
-  }
-},100);
-
-/* ---------------------------------------------------------------
-   7. ドロップはローカル物理を優先し、同期対象は生成/取得だけ。
-   毎フレーム座標は送らない。
----------------------------------------------------------------- */
-const _v22OldSpawnDrop=window.spawnDrop;
-if(typeof _v22OldSpawnDrop==='function'&&!window.__v22DropHook){
-  window.__v22DropHook=true;
-  window.spawnDrop=function(type,pos,remote=false){
-    _v22OldSpawnDrop(type,pos);
-    if(remote||gameMode!=='multi'||!currentMatchId||!window.supabaseClient)return;
-    const id='drop_'+myPeerId+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6);
-    const m=drops?.[drops.length-1];
-    if(m)m.userData.v22DropId=id;
-    window.supabaseClient.from('bw_drops').upsert({
-      drop_id:id,match_id:currentMatchId,item_type:type,amount:1,
-      x:pos.x,y:pos.y,z:pos.z,owner_uid:myPeerId,state:'ground',
-      expires_at:new Date(Date.now()+60000).toISOString()
-    }).then(()=>{}).catch(()=>{});
-  };
-}
-
-/* ドロップRealtime受信 */
-function _v22StartDropRealtime(){
-  if(!window.supabaseClient||!currentMatchId||gameMode!=='multi')return;
-  if(window.__v22DropChannel)try{window.supabaseClient.removeChannel(window.__v22DropChannel)}catch(e){}
-  window.__v22DropChannel=window.supabaseClient
-    .channel('bw-drops-'+currentMatchId)
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bw_drops',
-      filter:'match_id=eq.'+currentMatchId},p=>{
-        const d=p.new;
-        if(!d||d.owner_uid===myPeerId)return;
-        if(d.state!=='ground')return;
-        if(typeof drops!=='undefined'&&drops.some(x=>x.userData?.v22DropId===d.drop_id))return;
-        if(typeof spawnDrop==='function')spawnDrop(d.item_type,new THREE.Vector3(+d.x,+d.y,+d.z),true);
-        const m=drops?.[drops.length-1];if(m)m.userData.v22DropId=d.drop_id;
-      })
-    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'bw_drops',
-      filter:'match_id=eq.'+currentMatchId},p=>{
-        const d=p.new;if(!d)return;
-        const m=(drops||[]).find(x=>x.userData?.v22DropId===d.drop_id);
-        if(m&&d.state!=='ground'){scene.remove(m);drops.splice(drops.indexOf(m),1);}
-      }).subscribe();
-}
-window.addEventListener('bw:players',()=>{});
-window.addEventListener('load',()=>setTimeout(_v22StartDropRealtime,1200));
-
-/* ---------------------------------------------------------------
-   8. 練習記録をSupabaseにも保存（失敗時はローカルのみで継続）
----------------------------------------------------------------- */
-async function _v22SaveTrainingCloud(type,ms){
-  try{
-    if(!window.supabaseClient||!myPeerId)return;
-    const best=_v22TrainingLoadBest(type);
-    await window.supabaseClient.from('bw_training_records').upsert({
-      uid:myPeerId,course_id:'default_'+type,type,
-      score_ms:ms,attempts:_v22Training.attempt,
-      best_ms:best,last_ms:ms,
-      completed_count:1,deaths:_v22Training.deaths
-    },{onConflict:'uid,course_id'});
-  }catch(e){}
-}
-const _v22OldFinish=_v22FinishTraining;
-_v22FinishTraining=function(){
-  const before=_v22Training.start;
-  _v22OldFinish();
-  if(before){
-    const ms=Math.round(performance.now()-before);
-    _v22SaveTrainingCloud(_v22Training.type,ms);
-  }
-};
-
-/* ---------------------------------------------------------------
-   9. アイテム表示の最低限の3D化
-   既存の右手表示を壊さず、ブロック系は小型Cubeとして見せる。
----------------------------------------------------------------- */
-function _v22UpdateHeldBlockVisual(){
-  try{
-    const hg=window._handGroup;
-    if(!hg)return;
-    const item=player?.inv?.[player.selectedIdx];
-    let old=hg.getObjectByName('v22-held-block');
-    if(old){hg.remove(old);old.geometry?.dispose?.();}
-    if(!item?.type)return;
-    const blockTypes=new Set(['wool_red','wool_blue','wool_green','wool_yellow','wood','end','dirt','grass','stone','cobblestone','log','leaves']);
-    if(!blockTypes.has(item.type))return;
-    const geo=new THREE.BoxGeometry(.42,.42,.42);
-    const hex={
-      wool_red:0xcc4444,wool_blue:0x4444cc,wool_green:0x228822,wool_yellow:0xccaa00,
-      wood:0xc49a62,end:0xd9d9a0,dirt:0x8a5a35,grass:0x5d9b2a,stone:0x888888,
-      cobblestone:0x777777,log:0x6b4724,leaves:0x3d7f27
-    }[item.type]||0xaaaaaa;
-    const mat=new THREE.MeshLambertMaterial({color:hex});
-    const mesh=new THREE.Mesh(geo,mat);mesh.name='v22-held-block';
-    mesh.position.set(.05,-.05,-.42);mesh.rotation.set(.3,.4,.2);
-    hg.add(mesh);
-  }catch(e){}
-}
-setInterval(_v22UpdateHeldBlockVisual,120);
-
-/* ---------------------------------------------------------------
-   10. 頭部向き/攻撃アニメーションの見た目反映
----------------------------------------------------------------- */
-setInterval(()=>{
-  try{
-  const apply=(mesh,p)=>{
-    if(!mesh||!p)return;
-    const head=mesh.getObjectByName('head');
-    if(typeof _bwApplyHeadLook==='function') _bwApplyHeadLook(mesh, Number.isFinite(p.yaw)?p.yaw:mesh.rotation.y, p.headPitch??p.pitch??0);
-    const now=Date.now();
-    const atk=(p.attackAnimationUntil||0)>now;
-    const ra=mesh.getObjectByName('ra'),la=mesh.getObjectByName('la');
-    if(atk){
-      const phase=Math.max(0,Math.min(1,(p.attackAnimationUntil-now)/180));
-      if(ra)ra.rotation.x=-Math.sin(phase*Math.PI)*1.4;
-      if(la)la.rotation.x= Math.sin(phase*Math.PI)*0.15;
-    }
-  };
-  apply(window.playerMesh3p||null,player);
-  if(typeof mpPlayers!=='undefined'){
-    Object.entries(mpPlayers).forEach(([uid,p])=>apply(mpMeshes?.[uid],p));
-  }
-  }catch(e){}
-},33);
-
-
-/* ===============================================================
-   V23 GAMEPLAY / AI / FLUID / VISUAL ENHANCEMENTS
-   - AI block breaking/defense/grounded bridging
-   - finite-ish resource economy for bots
-   - precise fall damage + water landing
-   - match timer always visible outside training
-   - precision debug overlay
-   - water/lava flow-like physics
-   - enhanced rendering / texture filtering
-   - bot held-item switching
-   =============================================================== */
-window._bwFluidEnabled=true;
-window._bwFall={lastLanding:0,airStartY:0,wasAir:false};
-window._bwMatchStart=0;
-window._bwVisualQuality=localStorage.getItem('bw_visual_quality')||'standard';
-
-function _bwEnsureOverlay(){
-  let t=document.getElementById('bw-match-timer');
-  if(!t){t=document.createElement('div');t.id='bw-match-timer';document.body.appendChild(t);}
-  let f=document.getElementById('bw-fluid-badge');
-  if(!f){f=document.createElement('div');f.id='bw-fluid-badge';document.body.appendChild(f);}
-  let d=document.getElementById('bw-debug-precision');
-  if(!d){d=document.createElement('div');d.id='bw-debug-precision';document.body.appendChild(d);}
-}
-function _bwFmt(ms){
-  const s=Math.max(0,ms/1000),m=Math.floor(s/60),ss=Math.floor(s%60),cs=Math.floor((s%1)*100);
-  return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-}
-function _bwUpdateMatchTimer(){
-  _bwEnsureOverlay();
-  const el=document.getElementById('bw-match-timer');
-  if(!el)return;
-  const show=gameMode==='multi'||gameMode==='solo'||gameMode==='kishiku';
-  if(!show||gameMode==='training_bridge'||gameMode==='training_parkour'){
-    el.style.display='none'; return;
-  }
-  if(!_bwMatchStart)_bwMatchStart=performance.now();
-  el.style.display='block';
-  el.textContent='⏱ '+_bwFmt(performance.now()-_bwMatchStart);
-}
-
-function _bwLandingDamage(speed){
-  if(gameMode==='training_bridge'||gameMode==='training_parkour') return;
-  if(!Number.isFinite(speed))return;
-  // Minecraft-like thresholded model: no damage for small drops, increasing damage above ~3 blocks/s.
-  // Water cancels fall damage; see fluid section below.
-  if(window._bwInWater)return;
-  const effective=Math.max(0,speed-7.2);
-  if(effective<=0)return;
-  const dmg=Math.floor(effective*1.35);
-  if(dmg>0)applyDamage(Math.min(dmg,player.maxHp));
-}
-window._bwLandingDamage=_bwLandingDamage;
-
-function _bwIsFluidAt(x,y,z){
-  const k=blockKey(Math.round(x),Math.round(y),Math.round(z));
-  const a=blockMap.get(k)||[];
-  return a.find(b=>['water','water_source','lava','magma','flowing_water','flowing_lava'].includes(b.userData?.type||b.type));
-}
-function _bwFluidTick(dt){
-  if(!window._bwFluidEnabled||!blockMap||!player)return;
-  window._bwInWater=false;
-  const around=[];
-  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)for(let dz=-1;dz<=1;dz++){
-    const b=_bwIsFluidAt(player.pos.x+dx,player.pos.y+dy,player.pos.z+dz);
-    if(b)around.push(b);
-  }
-  if(!around.length)return;
-  let water=false,lava=false,wx=0,wz=0,lx=0,lz=0;
-  around.forEach(b=>{
-    const t=b.userData?.type||b.type;
-    if(t==='water'||t==='water_source'||t==='flowing_water'){water=true;wx+=b.position.x-player.pos.x;wz+=b.position.z-player.pos.z;}
-    if(t==='lava'||t==='magma'||t==='flowing_lava'){lava=true;lx+=b.position.x-player.pos.x;lz+=b.position.z-player.pos.z;}
-  });
-  if(water){
-    window._bwInWater=true;
-    player.vel.y=Math.max(player.vel.y,-2.2);
-    player.vel.x*=Math.pow(.45,dt);
-    player.vel.z*=Math.pow(.45,dt);
-    // Simple flow: fluid gradients push entities; local simulation avoids per-frame DB traffic.
-    player.vel.x+=Math.sign(wx)*0.55*dt;
-    player.vel.z+=Math.sign(wz)*0.55*dt;
-  }
-  if(lava){
-    player.vel.x*=Math.pow(.72,dt);
-    player.vel.z*=Math.pow(.72,dt);
-    if(Math.random()<dt*0.7)applyDamage(1.0);
-  }
-  const badge=document.getElementById('bw-fluid-badge');
-  if(badge){
-    badge.style.display='block';
-    badge.textContent=lava?'🔥 マグマ流：移動低下 / 継続ダメージ':'💧 水流：減速 / 落下ダメージ無効';
-    setTimeout(()=>{if(badge)badge.style.display='none';},220);
-  }
-}
-
-function _bwFluidBlockType(type){
-  return ['water','water_source','flowing_water','lava','flowing_lava','magma'].includes(type);
-}
-function _bwAddFluidLandmarks(){
-  if(!['grassland','nether'].includes(currentMapTheme))return;
-  const y=61;
-  const add=(x,z,type)=>{
-    const k=blockKey(x,y,z);
-    if(!blockMap.has(k))addBlock(x,y,z,type,false);
-  };
-  if(currentMapTheme==='grassland'){
-    // small stream with a source and two flow directions
-    for(let z=-9;z<=9;z++){
-      add(14,z,z===-9?'water_source':'flowing_water');
-      if(z%3===0)add(15,z,'water');
-    }
-  }else{
-    // nether lava channel
-    for(let x=-18;x<=18;x++){
-      add(x,-13,'flowing_lava');
-      if(x%4===0)add(x,-12,'lava');
-    }
-  }
-}
-const _bwOldWorld2=window.createWorld;
-if(typeof _bwOldWorld2==='function'&&!window.__bwFluidWorldHook){
-  window.__bwFluidWorldHook=true;
-  window.createWorld=function(){
-    const r=_bwOldWorld2.apply(this,arguments);
-    try{_bwAddFluidLandmarks();}catch(e){}
-    return r;
-  };
-}
-
-function _bwCanPlaceGrounded(x,y,z){
-  // Do not allow AI to place into unsupported air.
-  // A block must touch the current footprint or another solid block from below.
-  const key=blockKey(x,y,z);
-  if(blockMap.has(key))return false;
-  const below=blockMap.has(blockKey(x,y-1,z));
-  const side=blockMap.has(blockKey(x-1,y,z))||blockMap.has(blockKey(x+1,y,z))||
-             blockMap.has(blockKey(x,y,z-1))||blockMap.has(blockKey(x,y,z+1));
-  return below||side;
-}
-function _bwAIBlockBreak(e){
-  return; // ユーザー依頼: AIのブロック破壊を無効化
-  const ud=e?.userData;if(!ud||ud.isGolem)return;
-  if(!ud.breakTimer)ud.breakTimer=0;
-  ud.breakTimer+=0.05;
-  if(ud.breakTimer<0.55)return;
-  const dir=new THREE.Vector3(Math.sin(e.rotation.y),0,Math.cos(e.rotation.y));
-  const bx=Math.round(e.position.x+dir.x*1.0),by=Math.round(e.position.y),bz=Math.round(e.position.z+dir.z*1.0);
-  const candidates=nearBlocks(bx,by,bz).filter(b=>!b.userData?.isBed);
-  const target=candidates.find(b=>{
-    const dx=Math.abs(b.position.x-e.position.x),dz=Math.abs(b.position.z-e.position.z);
-    return dx<1.2&&dz<1.2&&b.position.y>=e.position.y-1&&b.position.y<=e.position.y+1.8;
-  });
-  if(target&&typeof removeBlock==='function'){
-    ud.breakTimer=0;
-    const pos=target.position.clone();
-    const typ=target.userData?.type||'';
-    removeBlock(target);
-    spawnParticles(pos,'#bbbbbb',4);
-    // Only award useful drops for placed blocks.
-    if(typ&&typ!=='stone'&&typ!=='dirt'&&gameMode==='solo')spawnDrop(typ,pos);
-  }
-}
-function _bwAIDefendBed(e){
-  const ud=e?.userData;if(!ud||ud.isGolem||!TEAM_BED_STATUS[ud.team])return;
-  if(!ud.hasWool||!(ud.woolStock>0))return;
-  ud.defendTimer=(ud.defendTimer||0)+0.05;
-  if(ud.defendTimer<1.4)return;
-  const bed=allBlocks().find(b=>b.userData?.isBed&&b.userData.team===ud.team);
-  if(!bed)return;
-  const dx=Math.round(bed.position.x+(Math.random()<.5?1:-1)*(Math.random()<.5?1:2));
-  const dz=Math.round(bed.position.z+(Math.random()<.5?1:-1)*(Math.random()<.5?1:2));
-  const by=Math.round(bed.position.y+1);
-  if(_bwCanPlaceGrounded(dx,by,dz)){
-    ud.defendTimer=0;addBlock(dx,by,dz,'wool_'+String(ud.team).toLowerCase(),true);ud.woolStock--;
-  }
-}
-function _bwAIInventory(e){
-  const ud=e?.userData;if(!ud)return;
-  if(!ud.aiInv)ud.aiInv={iron:8,gold:2,wool:0,iron_sword:0};
-  // Pickup nearby drops instead of inventing resources.
-  if(typeof drops!=='undefined'){
-    for(let i=drops.length-1;i>=0;i--){
-      const d=drops[i],t=d.userData?.type;
-      if(!t||e.position.distanceTo(d.position)>2.2)continue;
-      if(t==='iron')ud.aiInv.iron+=(d.userData?.count||1);
-      else if(t==='gold')ud.aiInv.gold+=(d.userData?.count||1);
-      else if(t.startsWith('wool_'))ud.aiInv.wool+=(d.userData?.count||1);
-      else continue;
-      scene.remove(d);drops.splice(i,1);
-    }
-  }
-  // Simple shop: only wool and iron sword as requested.
-  if(ud.aiInv.wool<4&&ud.aiInv.gold>=2){
-    ud.aiInv.gold-=2;ud.aiInv.wool+=8;ud.hasWool=true;ud.woolStock=(ud.woolStock||0)+8;
-  }
-  if(!ud.hasIronSword&&ud.aiInv.iron>=8){
-    ud.aiInv.iron-=8;ud.hasIronSword=true;ud.damage=Math.min(5,Math.max(3,ud.damage||2));
-  }
-  // No passive resource generation.
-  ud.iron=ud.aiInv.iron;ud.gold=ud.aiInv.gold;
-}
-function _bwAISwitchHeld(e){
-  const ud=e?.userData;if(!ud)return;
-  const hp=ud.hp/(ud.maxHp||20);
-  if(hp<.35&&ud.hasIronSword)ud.heldItem='iron_sword';
-  else if(ud.state==='raid'&&ud.woolStock>0)ud.heldItem='wool_'+String(ud.team).toLowerCase();
-  else if(ud.hasIronSword)ud.heldItem='iron_sword';
-  else ud.heldItem='wool_'+String(ud.team).toLowerCase();
-}
-const _bwOldAI2=window.updateAI;
-if(typeof _bwOldAI2==='function'&&!window.__bwAI2Hook){
-  window.__bwAI2Hook=true;
-  window.updateAI=function(dt){
-    _bwOldAI2.call(this,dt);
-    enemies.forEach(e=>{
-      _bwAIInventory(e);
-      _bwAISwitchHeld(e);
-      _bwAIBlockBreak(e);
-      _bwAIDefendBed(e);
-    });
-  };
-}
-
-function _bwPreciseDebug(){
-  _bwEnsureOverlay();
-  const d=document.getElementById('bw-debug-precision');
-  if(!window._v22Debug){d.style.display='none';return;}
-  const near=_bwIsFluidAt(player.pos.x,player.pos.y,player.pos.z);
-  const rows=[
-    '=== PRECISION DEBUG ===',
-    `mode=${gameMode} match=${currentMatchId||'-'}`,
-    `theme=${currentMapTheme} seed=${currentMapSeed||0}`,
-    `pos=${player.pos.x.toFixed(4)},${player.pos.y.toFixed(4)},${player.pos.z.toFixed(4)}`,
-    `vel=${player.vel.x.toFixed(4)},${player.vel.y.toFixed(4)},${player.vel.z.toFixed(4)}`,
-    `yaw=${(controls.yaw*180/Math.PI).toFixed(3)} pitch=${(controls.pitch*180/Math.PI).toFixed(3)}`,
-    `ground=${!!player.onGround} crouch=${!!player.isCrouching} sprint=${!!player.isSprinting}`,
-    `hp=${player.hp.toFixed(2)}/${player.maxHp.toFixed(2)} fallV=${player.vel.y.toFixed(3)}`,
-    `held=${player.inv?.[player.selectedIdx]?.type||'-'} slot=${player.selectedIdx}`,
-    `blocks=${typeof blockMap!=='undefined'?blockMap.size:0} drops=${typeof drops!=='undefined'?drops.length:0}`,
-    `mp=${Object.keys(mpPlayers||{}).length} ai=${typeof enemies!=='undefined'?enemies.length:0}`,
-    `fluid=${near?(near.userData?.type||near.type||'?'):'none'} fluidOn=${window._bwFluidEnabled}`,
-    `fov=${camera?.fov?.toFixed(2)||'-'} pixelRatio=${renderer?.getPixelRatio?.().toFixed(2)||'-'}`,
-    `rt=${typeof _supabaseRealtimeChannels!=='undefined'?_supabaseRealtimeChannels.length:0}`,
-    `fps=${typeof _fpsEl!=='undefined'&&_fpsEl?.textContent?_fpsEl.textContent:'-'}`,
-    `--- v26 追加デバッグ ---`,
-    `gameMode=${gameMode} matchId=${currentMatchId||'-'} activeMenu=${activeMenu||'-'} paused=${_gamePaused}`,
-    `右腕: handGroup=${!!window._handGroup} attached=${window._handGroup&&window._handGroup.parent===camera} item=${player.inv?.[player.selectedIdx]?.type||'素手'}`,
-    `影: enabled=${renderer?.shadowMap?.enabled} type=${renderer?.shadowMap?.type} mapSize=${window._bwSunLight?.shadow?.mapSize?.x||'-'}`,
-    `画質=${window._bwVisualQuality} 実験的機能=${window._bwExperimentalGraphics} スキン精度=${window._bwSkinRealism}`,
-    `最終ヒット: ${window._bwLastHitDebug||'(なし)'}`,
-    `Supabase: ${window._supabaseLastError||'OK'}`,
-    `--- v26.3 追加デバッグ ---`,
-    `採掘中=${!!player.mining} 設置中=${!!player.placing} pointerLock=${!!document.pointerLockElement}`,
-    `スキン読込=${!!_skinImage} 精度=${window._bwSkinRealism||'mid'} レイヤー表示=${_skinLayerVisible}`,
-    `頭yaw=${(window.playerMesh3p?.getObjectByName('head')?.rotation.y*180/Math.PI||0).toFixed(1)} 頭pitch=${(window.playerMesh3p?.getObjectByName('head')?.rotation.x*180/Math.PI||0).toFixed(1)}`,
-    `AI内訳: ${typeof enemies!=='undefined'?enemies.map(e=>`${e.userData?.team||'?'}:${e.userData?.state||'?'}(hp${Math.round(e.userData?.hp||0)})`).join(' / '):'(なし)'}`,
-    `画面=${innerWidth}x${innerHeight} DPR=${devicePixelRatio}`,
-    `--- v27.1 ダメージ送受信パイプライン ---`,
-    `[送信]試行=${window._bwDmgDebug?.sent||0} 失敗=${window._bwDmgDebug?.sendFail||0} 最終エラー=${window._bwDmgDebug?.lastSendErr||'(なし)'}`,
-    `[受信]poll回数=${window._bwDmgDebug?.pollCount||0} poll失敗=${window._bwDmgDebug?.pollFail||0} 実際に受信=${window._bwDmgDebug?.received||0} 最終エラー=${window._bwDmgDebug?.lastPollErr||'(なし)'}`,
-    `最終poll経過=${window._bwDmgDebug?.lastPollAt?((Date.now()-window._bwDmgDebug.lastPollAt)/1000).toFixed(1)+'秒前':'(未実行=multiモードで対戦を開始していない可能性)'}`
-  ];
-  d.textContent=rows.join('\n');d.style.display='block';
-}
-setInterval(_bwPreciseDebug,150);
-
-function _bwSetVisualQuality(q){
-  window._bwVisualQuality=q;
-  localStorage.setItem('bw_visual_quality',q);
-  if(!renderer)return;
-  const ratio=q==='cinematic'?Math.min(devicePixelRatio,2):q==='enhanced'?Math.min(devicePixelRatio,1.75):Math.min(devicePixelRatio,1.25);
-  renderer.setPixelRatio(ratio);
-  // v26追記: 影MOD相当の見た目にするため、標準品質でも軽量な解像度で常時ONにする
-  renderer.shadowMap.enabled=true;
-  if(window._bwSunLight){
-    const mapSize=q==='cinematic'?4096:q==='enhanced'?2048:1024;
-    window._bwSunLight.shadow.mapSize.set(mapSize,mapSize);
-    window._bwSunLight.shadow.radius=q==='cinematic'?1.5:q==='enhanced'?2.5:3.5;
-    window._bwSunLight.shadow.map?.dispose?.();
-    window._bwSunLight.shadow.map=null;
-  }
-  // v26追記: 本家Minecraftの影は輪郭がくっきりしているため、標準/強化はPCFShadowMap(硬め)、
-  // 一番上のcinematicのみ少し柔らかいPCFSoftShadowMapにする。
-  renderer.shadowMap.type=q==='cinematic'?THREE.PCFSoftShadowMap:THREE.PCFShadowMap;
-
-  // v26追記: 画質ティアごとにシャドウの投影範囲(frustum)を変える。
-  // 同じ解像度でも範囲を絞るほど1テクセルあたりの実距離が小さくなり、
-  // 影の輪郭がよりシャープになる(その代わり遠くのオブジェクトの影が届かなくなる)。
-  if(window._bwSunLight){
-    const range=q==='cinematic'?32:q==='enhanced'?42:56;
-    const cam=window._bwSunLight.shadow.camera;
-    cam.left=-range; cam.right=range; cam.top=range; cam.bottom=-range;
-    cam.updateProjectionMatrix();
-  }
-
-  // v26追記: 高画質ほど環境光/半球光を少し絞ってコントラストを強め、
-  // 影がはっきり主張する「影MOD的な」メリハリのある見た目に近づける。
-  scene.traverse(o=>{
-    if(o.isAmbientLight) o.intensity=q==='cinematic'?0.32:q==='enhanced'?0.38:0.42;
-    if(o.isHemisphereLight) o.intensity=q==='cinematic'?0.28:q==='enhanced'?0.32:0.35;
-    if(o.isDirectionalLight) o.intensity=q==='cinematic'?0.95:q==='enhanced'?0.9:0.85;
-  });
-  renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=q==='cinematic'?1.08:1.0;
-  // Better texture sampling without destroying pixel-art character skins.
-  if(typeof TEX==='object')Object.values(TEX).forEach(t=>{
-    if(t&&t.isTexture){
-      t.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),q==='cinematic'?8:4);
-      t.needsUpdate=true;
-    }
-  });
-}
-window._bwSetVisualQuality=_bwSetVisualQuality;
-setTimeout(()=>_bwSetVisualQuality(window._bwVisualQuality),1000);
-
-// v26追記: 実験的機能(ポストエフェクトシェーダー / スキン描画精度3段階)の状態管理
-window._bwExperimentalGraphics = localStorage.getItem('bw_exp_graphics')==='1';
-window._bwSkinRealism = localStorage.getItem('bw_skin_realism') || 'mid';
-
-window._bwSetExperimentalGraphics=function(on){
-  window._bwExperimentalGraphics=!!on;
-  localStorage.setItem('bw_exp_graphics', on?'1':'0');
-};
-
-window._bwSetSkinRealism=function(level){
-  if(!['low','mid','high'].includes(level)) level='mid';
-  window._bwSkinRealism=level;
-  localStorage.setItem('bw_skin_realism', level);
-  // 既存のプレイヤーメッシュを新しい精度設定で作り直す
-  if(typeof refreshPlayerMeshSkin==='function' && window.playerMesh3p) refreshPlayerMeshSkin();
-};
-
-// 設定パネルを開いたときにUIへ現在値を反映
-(function _bwSyncExperimentalUI(){
-  const applyUI=()=>{
-    const cb=document.getElementById('set-expGraphics');
-    if(cb) cb.checked=!!window._bwExperimentalGraphics;
-    const sel=document.getElementById('set-skinRealism');
-    if(sel) sel.value=window._bwSkinRealism||'mid';
-    const sm=document.getElementById('bw-shader-mode');
-    if(sm) sm.value=window._bwShaderMode||'vanilla';
-  };
-  setTimeout(applyUI,1200);
-  const btn=document.querySelector('[onclick*="settings-panel"]');
-  document.addEventListener('click',()=>{setTimeout(applyUI,50);},true);
-})();
-
-function _bwAddSettings(){
-  const panel=document.getElementById('settings-panel');
-  if(!panel||document.getElementById('bw-bot-skin-setting'))return;
-  const host=panel.querySelector('div[style*="max-width:820px"]')||panel.firstElementChild;
-  const section=document.createElement('div');
-  section.id='bw-bot-skin-setting';
-  section.style.cssText='margin-top:14px;border-top:1px solid #333;padding-top:10px';
-  section.innerHTML=`<div class="set-section">🤖 BOT</div>
-  <label class="set-label">BOTスキンPNG <input id="bw-bot-skin-file" type="file" accept="image/png"></label>
-  <div style="font-size:11px;color:#777;margin-top:4px">選択したPNGはこのPCのBOT用スキンとして使用します。</div>`;
-  host?.appendChild(section);
-  const inp=section.querySelector('#bw-bot-skin-file');
-  inp?.addEventListener('change',e=>{
-    const f=e.target.files?.[0];if(!f)return;
-    const r=new FileReader();
-    r.onload=()=>{localStorage.setItem('bw_bot_skin_data',String(r.result||''));announce('🤖 BOTスキンを設定しました','#55ffff');};
-    r.readAsDataURL(f);
-  });
-}
-window.addEventListener('load',_bwAddSettings);
-
-function _bwApplyBotSkinToMesh(mesh){
-  const data=localStorage.getItem('bw_bot_skin_data');
-  if(!data||!mesh)return;
-  const img=new Image();
-  img.onload=()=>{
-    if(!mesh.parent)return;
-    const pos=mesh.position.clone(),ud={...mesh.userData};
-    const parent=mesh.parent;
-    parent.remove(mesh);
-    window._bwMeshFacing='ai';
-    const nm=createSimplePlayerMesh(TEAM_COLOR[ud.team]||0xff3333,img);
-    window._bwMeshFacing='player';
-    nm.userData._aiFace=true;
-    nm.position.copy(pos);Object.assign(nm.userData,ud);parent.add(nm);
-    const idx=enemies.indexOf(mesh);if(idx>=0)enemies[idx]=nm;
-  };
-  img.src=data;
-}
-const _bwOldSpawnAI=window.spawnAI;
-if(typeof _bwOldSpawnAI==='function'&&!window.__bwBotSkinHook){
-  window.__bwBotSkinHook=true;
-  window.spawnAI=function(...args){
-    const before=enemies.length;
-    const r=_bwOldSpawnAI.apply(this,args);
-    setTimeout(()=>{if(enemies.length>before)_bwApplyBotSkinToMesh(enemies[enemies.length-1]);},40);
-    return r;
-  };
-}
-
-/* Render a small amount of actual fluid geometry; keeps it local and cheap. */
-const _bwFluidMeshes=[];
-function _bwFluidVisualTick(){
-  const scene=window.scene, blockMap=window.blockMap;
-  if(!scene||!blockMap)return;
-  const seen=new Set();
-  blockMap.forEach(arr=>arr.forEach(b=>{
-    const t=b.userData?.type||b.type;
-    if(!_bwFluidBlockType(t))return;
-    const id=b.uuid;seen.add(id);
-    if(b.userData._fluidEnhanced)return;
-    const mat=new THREE.MeshPhongMaterial({
-      color:t.includes('lava')||t==='magma'?0xff5522:0x2b8cff,
-      transparent:true,opacity:t.includes('lava')||t==='magma'?.82:.56,
-      shininess:70,emissive:t.includes('lava')||t==='magma'?0x331100:0x001133
-    });
-    b.material=mat;b.userData._fluidEnhanced=true;
-  }));
-}
-setInterval(_bwFluidVisualTick,500);
-
-setInterval(()=>{
-  try{
-    const gameMode=window.gameMode;
-    if(!_bwMatchStart&&(gameMode==='multi'||gameMode==='solo'))_bwMatchStart=performance.now();
-    _bwUpdateMatchTimer();
-    _bwFluidTick(0.1);
-  }catch(e){}
-},100);
-
-window.addEventListener('load',()=>{
-  setTimeout(()=>{
-    _bwEnsureOverlay();
-    _bwSetVisualQuality(window._bwVisualQuality);
-  },700);
-});
-
-/* 初期UI */
-window.addEventListener('load',()=>{_v22DebugPanel();});
-})();
-</script>
-
-
-<script id="bw-v25-shader-script">
-
-/* ===============================================================
-   v25 SHADER VARIANTS
-   Real fullscreen GLSL post-processing, kept optional and lightweight.
-   Modes: vanilla / vivid / cinematic / toon / night
-   =============================================================== */
-(function(){
-  'use strict';
-  window._bwShaderMode = localStorage.getItem('bw_shader_mode') || 'vanilla';
-  let _rt=null, _ppScene=null, _ppCamera=null, _ppMesh=null;
-
-  const VERT = `
-    varying vec2 vUv;
-    void main(){
-      vUv = uv;
-      gl_Position = vec4(position,1.0);
-    }`;
-
-  const FRAG = `
-    uniform sampler2D tDiffuse;
-    uniform float mode;
-    uniform float time;
-    varying vec2 vUv;
-
-    vec3 acesLike(vec3 x){
-      return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0);
-    }
-
-    void main(){
-      vec4 src = texture2D(tDiffuse, vUv);
-      vec3 c = src.rgb;
-
-      // 0 vanilla
-      if(mode < 0.5){
-        gl_FragColor = src;
-        return;
-      }
-
-      // 1 vivid: gentle saturation/contrast, keeps Minecraft pixel art readable.
-      if(mode < 1.5){
-        float l = dot(c, vec3(0.2126,0.7152,0.0722));
-        c = mix(vec3(l), c, 1.10);
-        c = (c - 0.5) * 1.07 + 0.5;
-        c = acesLike(c);
-      }
-      // 2 cinematic: filmic curve + subtle vignette.
-      else if(mode < 2.5){
-        c = acesLike(c * 1.08);
-        float d = distance(vUv, vec2(0.5));
-        float vig = smoothstep(0.82,0.22,d);
-        c *= mix(0.88,1.0,vig);
-      }
-      // 3 toon: posterized lighting, but no outline pass.
-      else if(mode < 3.5){
-        c = acesLike(c);
-        c = floor(c*5.0+0.5)/5.0;
-        c = mix(c, pow(max(c,0.0), vec3(0.92)), 0.35);
-      }
-      // 4 night: cool/darker grading with preserved UI brightness outside canvas.
-      else {
-        float l = dot(c, vec3(0.2126,0.7152,0.0722));
-        vec3 night = mix(vec3(0.055,0.09,0.16), vec3(0.36,0.50,0.72), l);
-        c = mix(c, night, 0.42);
-        c = acesLike(c*0.94);
-      }
-
-      gl_FragColor = vec4(c, src.a);
-    }`;
-
-  function modeNumber(){
-    return ({vanilla:0,vivid:1,cinematic:2,toon:3,night:4}[
-      window._bwShaderMode
-    ] ?? 0);
-  }
-
-  function _bwLiveRenderer(){
-    // v25追記: window.renderer が同期されていない場合でも、
-    // 同一ドキュメント内のトップレベルlet変数(renderer)を直接参照できるのでフォールバックする。
-    try{ if(window.renderer) return window.renderer; }catch(e){}
-    try{ if(typeof renderer!=='undefined' && renderer) return renderer; }catch(e){}
-    return null;
-  }
-  function _bwLiveScene(){
-    try{ if(window.scene) return window.scene; }catch(e){}
-    try{ if(typeof scene!=='undefined' && scene) return scene; }catch(e){}
-    return null;
-  }
-  function _bwLiveCamera(){
-    try{ if(window.camera) return window.camera; }catch(e){}
-    try{ if(typeof camera!=='undefined' && camera) return camera; }catch(e){}
-    return null;
-  }
-
-  function ensure(){
-    const R=_bwLiveRenderer(), S=_bwLiveScene(), C=_bwLiveCamera();
-    if(!R || !S || !C || !window.THREE) return false;
-    const w=Math.max(1,window.innerWidth||1), h=Math.max(1,window.innerHeight||1);
-    if(!_rt){
-      _rt=new THREE.WebGLRenderTarget(w,h,{
-        depthBuffer:true,
-        stencilBuffer:false,
-        minFilter:THREE.LinearFilter,
-        magFilter:THREE.LinearFilter
-      });
-      _ppScene=new THREE.Scene();
-      _ppCamera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-      _ppMesh=new THREE.Mesh(
-        new THREE.PlaneGeometry(2,2),
-        new THREE.ShaderMaterial({
-          uniforms:{
-            tDiffuse:{value:_rt.texture},
-            mode:{value:modeNumber()},
-            time:{value:0}
-          },
-          vertexShader:VERT,
-          fragmentShader:FRAG,
-          depthTest:false,
-          depthWrite:false
-        })
-      );
-      _ppScene.add(_ppMesh);
-    }
-    if(_rt.width !== w || _rt.height !== h) _rt.setSize(w,h);
-    _ppMesh.material.uniforms.mode.value=modeNumber();
-    return true;
-  }
-
-  window._bwRender=function(sc,cam){
-    const liveR=_bwLiveRenderer();
-    if(!liveR || !sc || !cam) return;
-    // v26追記: 実験的機能トグルがOFFの間は、ポストエフェクトを一切介さず
-    // 直接描画する(従来通りの軽量な挙動をデフォルトとして維持する)。
-    if(!window._bwExperimentalGraphics){
-      liveR.render(sc,cam);
-      return;
-    }
-    if(!ensure()){
-      liveR.render(sc,cam);
-      return;
-    }
-    const r=liveR;
-    r.setRenderTarget(_rt);
-    r.clear();
-    r.render(sc,cam);
-    r.setRenderTarget(null);
-    _ppMesh.material.uniforms.time.value=performance.now()*0.001;
-    r.render(_ppScene,_ppCamera);
-  };
-
-  window._bwSetShaderMode=function(mode){
-    if(!['vanilla','vivid','cinematic','toon','night'].includes(mode)) mode='vanilla';
-    window._bwShaderMode=mode;
-    localStorage.setItem('bw_shader_mode',mode);
-    if(_ppMesh) _ppMesh.material.uniforms.mode.value=modeNumber();
-    const el=document.getElementById('bw-shader-mode');
-    if(el) el.value=mode;
-  };
-
-  window.addEventListener('resize',()=>{
-    try{ if(_rt) _rt.setSize(Math.max(1,innerWidth),Math.max(1,innerHeight)); }catch(e){}
-  });
-})();
-
-</script>
-
-<script id="bw-v24-ui-script">
-(function(){
-  'use strict';
-  // ---------------- MC-like UI controller ----------------
-  const oldPause=window.togglePauseMenu;
-  const oldIngame=window.toggleInGameMenu;
-  function release(){try{document.exitPointerLock();}catch(e){}}
-  function capture(){ _bwRequestPointerLock(); }
-  window.togglePauseMenu=function(){
-    const el=document.getElementById('pause-menu'); if(!el)return;
-    const open=el.style.display==='block';
-    el.style.display=open?'none':'block';
-    if(!open)release(); else capture();
-    if(typeof window._syncRTAWithMenu==='function')window._syncRTAWithMenu();
-  };
-  window.toggleInGameMenu=function(){
-    const el=document.getElementById('ingame-menu'); if(!el)return;
-    const open=el.style.display==='block';
-    el.style.display=open?'none':'block';
-    if(!open)release(); else capture();
-    if(typeof window._syncRTAWithMenu==='function')window._syncRTAWithMenu();
-  };
-
-  // Inventory: mouse-first controls. Drag-and-drop is already supported by the game;
-  // this layer adds left/right click affordances and a clear mouse cursor while open.
-  function invOpen(){return window.activeMenu==='inventory';}
-  document.addEventListener('mousemove',function(e){
-    if(!invOpen())return;
-    const box=document.getElementById('inv-skin-box');
-    if(box && window.document.getElementById('inv-model')){
-      const r=box.getBoundingClientRect();
-      const nx=(e.clientX-(r.left+r.width/2))/(r.width/2);
-      const ny=(e.clientY-(r.top+r.height/2))/(r.height/2);
-      const mdl=document.getElementById('inv-model');
-      mdl.style.transform='rotateY('+(Math.max(-.95,Math.min(.95,nx))*.9)+'rad) rotateX('+(-Math.max(-.45,Math.min(.45,ny))*.42)+'rad)';
-      const head=mdl.querySelector('.head-3d');
-      if(head)head.style.transform='translate3d(-50%,0,0) rotateY('+(Math.max(-.8,Math.min(.8,nx))*.35)+'rad) rotateX('+(-Math.max(-.5,Math.min(.5,ny))*.25)+'rad)';
-    }
-  });
-
-  // Inventory open: put the cursor back on the screen and prevent accidental pointer-lock capture.
-  const obs=new MutationObserver(function(){
-    if(invOpen())release();
-  });
-  const inv=document.getElementById('win-inventory'); if(inv)obs.observe(inv,{attributes:true,attributeFilter:['style']});
-
-  // (ESC処理は setupInput 側で一本化済み。ここでの重複リスナーは削除)
-
-  // Shop polish: add a compact Minecraft-style header without changing shop purchase logic.
-  const shop=document.getElementById('win-shop');
-  if(shop){
-    shop.setAttribute('id','win-shop');
-    const h=shop.querySelector('h2');
-    if(h){h.textContent='アイテムショップ';h.style.fontSize='30px';h.style.marginBottom='8px';}
-  }
-
-  // Pause/in-game menus: use Japanese Minecraft-like labels while preserving existing actions.
-  // v26修正: 「ESCメニューが出ない(ボタンが無い空箱になる)」の原因はここだった。
-  // p.querySelector('div div') は "⏸ 一時停止" というタイトルのdivではなく、
-  // その一つ外側の「タイトル+ボタン群をまとめて包んでいるコンテナdiv」に
-  // マッチしてしまっていた(CSSの子孫セレクタの仕様上、pause-menu自身もdivとして
-  // カウントされるため)。そのコンテナに対して textContent= で代入すると、
-  // 中のボタン要素ごと全部消えて「ゲームメニュー」という文字だけの空箱になっていた。
-  // 直接の子要素チェーンでタイトルdivだけを正確に指定する。
-  const p=document.getElementById('pause-menu');
-  if(p){
-    const title=p.firstElementChild?.firstElementChild;
-    if(title)title.textContent='ゲームメニュー';
-  }
-
-  // Drop spawn hook: initialize gravity state for every newly spawned item, including remote drops.
-  const originalSpawn=window.spawnDrop;
-  if(typeof originalSpawn==='function'){
-    window.spawnDrop=function(type,pos,remote){
-      const before=window.drops?window.drops.length:0;
-      const r=originalSpawn.apply(this,arguments);
-      const arr=window.drops;
-      if(arr && arr.length>before){
-        const d=arr[arr.length-1];
-        d.userData.dropVy=0;
-        d.userData.grounded=false;
-        d.userData.amount=d.userData.amount||1;
-        d.userData.baseY=pos.y;
-      }
-      return r;
-    };
-  }
-
-  // If getGroundYAt does not exist in a particular map build, infer a reasonable block top
-  // from the collision system where possible. This is deliberately conservative.
-  if(typeof window.getGroundYAt!=='function'){
-    window.getGroundYAt=function(x,z){
-      try{
-        if(window.blocks && window.blocks.length){
-          let best=-Infinity;
-          for(const b of window.blocks){
-            const p=b.position;
-            if(Math.abs(p.x-x)<.51 && Math.abs(p.z-z)<.51 && p.y>best)best=p.y;
-          }
-          if(best>-Infinity)return best+.5;
-        }
-      }catch(e){}
-      return null;
-    };
-  }
-})();
-</script>
-
-<script id="bw-v25-comm-test">
-
-/* v25 Supabase通信セルフテスト */
-window.bwSupabaseSelfTest=async function(){
-  const out={client:!!window.supabaseClient, url:window.SUPABASE_URL||'', keyPresent:!!window.SUPABASE_ANON_KEY};
-  if(!window.supabaseClient){out.ok=false;out.error='Supabase client not initialized';return out;}
-  try{
-    const ping=await sbRequest({action:'testPing'});
-    out.ping=!!ping?.ok;
-    const settings=await sbRequest({action:'getSettings'});
-    out.settings=!!settings?.ok;
-    out.ok=out.ping&&out.settings;
-  }catch(e){out.ok=false;out.error=e?.message||String(e);}
-  console.table(out);
-  return out;
-};
-
-</script>
-<script>
-/* v29: options tabs, queue, youtube, lobby bg, chat history */
-(function(){
-  const YT_KEY='AIzaSyChej7OvcJ_kC3bm1I4V09Qnjce4kvVGOI';
-  const YT_SAFE='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&safeSearch=strict&videoEmbeddable=true&key='+encodeURIComponent(YT_KEY);
-  window._bwKeepSpectating=function(){
-    const es=document.getElementById('end-screen');
-    if(es) es.style.display='none';
-    player.isDead=true; player.spectatorMode=true;
-    announce('👁 観戦中  退出するまで続けられます','#55ffff');
-    _bwRequestPointerLock();
-  };
-  window._bwLoadBattleChatHistory=async function(){
-    const overlay=document.getElementById('chat-overlay');
-    if(!overlay) return;
-    const res=await sbRequest({action:'getMsgs',scope:'battle',matchId:currentMatchId});
-    if(!res||!res.msgs) return;
-    overlay.innerHTML='';
-    overlay.style.display='block';
-    res.msgs.slice(-40).forEach(m=>{
-      if(String(m.msg||'').startsWith('__EMOTE__')) return;
-      const div=document.createElement('div');
-      div.className='chat-msg';
-      div.innerHTML=`<span style="color:#ccc">${bwEscapeHTML(m.name)}:</span> ${bwEscapeHTML(m.msg)}`;
-      overlay.appendChild(div);
-    });
-    overlay.scrollTop=overlay.scrollHeight;
-  };
-  function initSettingsTabs(){
-    const host=document.getElementById('bw-opt-tabs');
-    const panel=document.getElementById('settings-panel');
-    if(!host||!panel||host.dataset.ready) return;
-    host.dataset.ready='1';
-    const pages={
-      account:['アカウント','🔐'],
-      game:['ゲーム','🎮'],
-      video:['グラフィック','🎨'],
-      hud:['画面','📊'],
-      controls:['操作','🖱️'],
-      sound:['音声','🔊'],
-      online:['マルチ','🌐']
-    };
-    Object.entries(pages).forEach(([id,meta])=>{
-      const b=document.createElement('button');
-      b.className='mc-btn';
-      b.textContent=meta[1]+' '+meta[0];
-      b.style.cssText='font-size:13px;padding:6px 10px;color:#fff';
-      b.onclick=()=>showPage(id);
-      b.dataset.page=id;
-      host.appendChild(b);
-    });
-    const box=document.getElementById('bw-login-box');
-    if(box) box.dataset.opt='account';
-    panel.querySelectorAll('.set-section').forEach(sec=>{
-      const t=sec.textContent||'';
-      let page='game';
-      if(/アカウント|ログイン/.test(t)) page='account';
-      else if(/グラフィック|影|実験|シェーダ/.test(t)) page='video';
-      else if(/HUD|画面/.test(t)) page='hud';
-      else if(/操作|キー/.test(t)) page='controls';
-      else if(/サウンド|音声/.test(t)) page='sound';
-      else if(/マルチ|プライベート|背景/.test(t)) page='online';
-      else if(/鬼畜|ゲーム/.test(t)) page='game';
-      sec.dataset.opt=page;
-      let n=sec.nextElementSibling;
-      while(n && !n.classList.contains('set-section') && n.id!=='bw-opt-tabs'){
-        if(!n.dataset.opt) n.dataset.opt=page;
-        n=n.nextElementSibling;
-      }
-    });
-    panel.querySelectorAll('div').forEach(el=>{
-      if(/BOT専用スキン/.test(el.textContent||'') && !el.dataset.opt) el.dataset.opt='account';
-    });
-    const extra=document.createElement('div');
-    extra.dataset.opt='online';
-    extra.innerHTML=`<div class="set-section">🌐 マルチプレイ</div>
-      <label class="set-label">近いレベルの相手だけ待つ <input type="checkbox" id="bw-queue-similar"></label>
-      <div class="set-section">🖼 ロビー背景</div>
-      <div style="font-size:12px;color:#333">管理者パネルから画像URLまたはアップロードで全ユーザーへ配信できます</div>`;
-    const grid=panel.querySelector('[style*="grid-template-columns"]');
-    if(grid) grid.appendChild(extra);
-    function showPage(id){
-      host.querySelectorAll('button').forEach(b=>{
-        b.style.filter=b.dataset.page===id?'brightness(1.15)':'brightness(0.86)';
-      });
-      panel.querySelectorAll('[data-opt]').forEach(el=>{
-        const on=el.dataset.opt===id;
-        if(!on){ el.style.display='none'; return; }
-        if(el.id==='bw-login-form' && window._bwAuthUser){ el.style.display='none'; return; }
-        if(el.id==='bw-login-code-row'){ el.style.display='none'; return; }
-        if(el.id==='bw-google-login-btn' && window._bwAuthUser){ el.style.display='none'; return; }
-        if(el.id==='bw-login-hint' && window._bwAuthUser){ el.style.display='none'; return; }
-        el.style.display='';
-      });
-      if(typeof _bwUpdateLoginUI==='function') _bwUpdateLoginUI();
-    }
-    showPage('account');
-  }
-  window._bwOpenQueuePanel=function(){
-    let p=document.getElementById('bw-queue-panel');
-    if(p){p.remove();return;}
-    p=document.createElement('div');
-    p.id='bw-queue-panel';
-    p.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2600;width:min(560px,94vw);background:rgba(12,16,24,.94);color:#eee;border:3px solid #8899aa;border-top-color:#dde;border-left-color:#dde;padding:18px 20px;box-shadow:0 16px 40px rgba(0,0,0,.65)';
-    p.innerHTML=`<h3 style="margin:0 0 6px;text-align:center;color:#ffcc66;font-size:28px;text-shadow:2px 2px #000">⚔ 対戦マッチング</h3>
-      <div style="font-size:13px;color:#bbb;text-align:center;margin-bottom:12px">ロビーを出ても待ち続けます。相手が見つかると通知します。</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <button class="mc-btn" onclick="window._bwQueueJoin('open')">誰とでも待つ</button>
-        <button class="mc-btn btn-blue" onclick="window._bwQueueJoin('similar')">近いレベル</button>
-        <button class="mc-btn btn-gold" onclick="window._bwQueueJoin('private')">部屋を作る</button>
-        <button class="mc-btn" onclick="window._bwOpenYoutube()" style="background:linear-gradient(#aa3333,#661111)">YouTube視聴</button>
-      </div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input id="bw-join-code" class="mc-input" placeholder="部屋コードを入力" style="flex:1;font-size:16px">
-        <button class="mc-btn btn-blue" onclick="window._bwQueueJoin('join')">入室</button>
-      </div>
-      <div id="bw-queue-status" style="font-size:14px;min-height:28px;color:#9cf;text-align:center">待機していません</div>
-      <button class="mc-btn btn-red" style="width:100%;margin-top:8px" onclick="window._bwQueueLeave();document.getElementById('bw-queue-panel').remove()">閉じる</button>`;
-    document.body.appendChild(p);
-  };
-  window._bwQueueJoin=async function(mode){
-    const name=document.getElementById('player-name')?.value||playerName||'Player';
-    let code='';
-    if(mode==='private'){ code=Math.random().toString(36).slice(2,8).toUpperCase(); }
-    if(mode==='join'){ code=(document.getElementById('bw-join-code')?.value||'').trim().toUpperCase(); mode='private'; }
-    const similar=mode==='similar' || document.getElementById('bw-queue-similar')?.checked;
-    const res=await sbRequest({action:'queueJoin',uid:myPeerId,name,level:playerData.level||1,mode:similar&&mode!=='private'?'similar':mode,code,targetUid:''});
-    const st=document.getElementById('bw-queue-status');
-    if(!res||!res.ok){ if(st) st.textContent='待機開始に失敗。SQLを実行してください'; return; }
-    window._bwQueueActive={mode:similar&&mode!=='private'?'similar':mode,code};
-    if(st) st.textContent=code?('部屋コード: '+code+'  相手を待っています'):'対戦相手を探しています...';
-  };
-  window._bwQueueLeave=function(){
-    window._bwQueueActive=null;
-    sbRequest({action:'queueLeave',uid:myPeerId});
-  };
-  window._bwSendDuel=async function(uid,name){
-    await sbRequest({action:'queueJoin',uid:myPeerId,name:playerName,level:playerData.level||1,mode:'duel',code:'',targetUid:uid});
-    announce(name+' にデュエルを送りました','#ffaa00');
-  };
-  async function pollQueue(){
-    let res=null;
-    try{ res=await sbRequest({action:'queueList'}); }catch(e){ return; }
-    const banner=document.getElementById('bw-queue-banner');
-    const list=(res&&res.players)||[];
-    if(banner){
-      const n=list.length;
-      const duels=list.filter(p=>p.mode==='duel'&&p.target_uid===myPeerId);
-      banner.textContent=duels.length?('⚔ デュエル申請 '+duels.length+'件 / 対戦待ち '+n+'人'):('対戦申請中: '+n+'人');
-    }
-    if(!window._bwQueueActive) return;
-    const meLv=playerData.level||1;
-    const mine=list.find(p=>p.uid===myPeerId);
-    const others=list.filter(p=>p.uid!==myPeerId);
-    let hit=null;
-    if(window._bwQueueActive.mode==='private'){
-      hit=others.find(p=>p.mode==='private'&&p.code===window._bwQueueActive.code);
-    } else if(window._bwQueueActive.mode==='duel'){
-      hit=others.find(p=>p.mode==='duel'&&(p.target_uid===myPeerId||p.uid===mine?.target_uid));
-    } else if(window._bwQueueActive.mode==='similar'){
-      hit=others.find(p=>Math.abs((+p.level||1)-meLv)<=8);
-    } else {
-      hit=others[0];
-    }
-    if(hit && !window._bwQueueMatched){
-      window._bwQueueMatched=true;
-      announce('対戦相手が見つかりました: '+(hit.name||''),'#55ff55');
-      await joinLobby();
-      setTimeout(()=>{ if(isHost) hostStartGame(); },1800);
-    }
-  }
-  window._bwAdminSetLobbyBg=async function(){
-    const url=document.getElementById('bw-admin-bg-url')?.value||'';
-    const res=await sbRequest({action:'setConfig',key:'lobby_bg',value:url});
-    if(res&&res.ok){ applyLobbyBg(); announce('ロビー背景を配信しました','#55ff55'); }
-    else announce('管理者のみ変更できます','#ff5555');
-  };
-  window._bwAdminUploadLobbyBg=function(){
-    const inp=document.getElementById('bw-admin-bg-file');
-    const file=inp&&inp.files&&inp.files[0];
-    if(!file){ announce('画像ファイルを選んでください','#ffaa00'); return; }
-    const img=new Image();
-    const fr=new FileReader();
-    fr.onload=()=>{
-      img.onload=async()=>{
-        const c=document.createElement('canvas');
-        const max=1280;
-        const s=Math.min(1,max/Math.max(img.width,img.height));
-        c.width=Math.max(1,Math.round(img.width*s));
-        c.height=Math.max(1,Math.round(img.height*s));
-        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-        const data=c.toDataURL('image/jpeg',0.72);
-        const res=await sbRequest({action:'setConfig',key:'lobby_bg',value:data});
-        if(res&&res.ok){ applyLobbyBg(); announce('画像を配信しました','#55ff55'); }
-        else announce('アップロードに失敗しました','#ff5555');
-      };
-      img.src=fr.result;
-    };
-    fr.readAsDataURL(file);
-  };
-  async function applyLobbyBg(){
-    const lobby=document.getElementById('lobby');
-    if(!lobby) return;
-    const res=await sbRequest({action:'getConfig'});
-    const url=res&&res.config&&res.config.lobby_bg;
-    if(url && url!=='none'){
-      const safe=String(url).replace(/"/g,'');
-      lobby.style.setProperty('--lobby-bg','url("'+safe+'")');
-      lobby.style.setProperty('--lobby-overlay','linear-gradient(rgba(6,10,16,.38),rgba(6,10,16,.58))');
-      lobby.style.backgroundImage='linear-gradient(rgba(6,10,16,.38),rgba(6,10,16,.58)),url("'+safe+'")';
-      lobby.style.backgroundSize='cover';
-      lobby.style.backgroundPosition='center';
-    }
-  }
-  function _bwYtExtractId(url){
-    if(!url) return '';
-    url=String(url).trim();
-    try{
-      if(url.includes('v=')) return url.split('v=')[1].split('&')[0];
-      if(url.includes('youtu.be/')) return url.split('youtu.be/')[1].split(/[?&/#]/)[0];
-      if(url.includes('/embed/')) return url.split('/embed/')[1].split(/[?&/#]/)[0];
-      if(url.includes('/shorts/')) return url.split('/shorts/')[1].split(/[?&/#]/)[0];
-      if(/^[A-Za-z0-9_-]{11}$/.test(url)) return url;
-    }catch(e){}
-    return '';
-  }
-  function _bwYtEnsureFrame(){
-    const host=document.getElementById('bw-yt-player');
-    if(!host) return null;
-    let f=document.getElementById('mainFrame');
-    if(!f){
-      host.innerHTML='';
-      f=document.createElement('iframe');
-      f.id='mainFrame';
-      f.name='mainFrame';
-      f.setAttribute('allow','autoplay; encrypted-media; fullscreen');
-      f.setAttribute('allowfullscreen','');
-      f.style.cssText='width:100%;height:100%;border:none;display:block;background:#000';
-      host.appendChild(f);
-    }
-    return f;
-  }
-  // Youtube Only type ver.html と同じ判定・同じ embed URL
-  function _bwYtLoadContent(url){
-    if(!url) return;
-    const input=document.getElementById('bw-yt-q');
-    if(input) input.value=url;
-    let videoId='';
-    if(url.includes('v=')) videoId=url.split('v=')[1].split('&')[0];
-    else if(url.includes('youtu.be/')) videoId=url.split('youtu.be/')[1].split('?')[0];
-    else if(url.includes('/embed/')) videoId=url.split('/embed/')[1].split(/[?&]/)[0];
-    else if(url.length===11 && !url.includes('.') && !url.includes('/')) videoId=url;
-    else videoId=_bwYtExtractId(url);
-    const embed='https://www.youtube-nocookie.com/embed/'+videoId+'?autoplay=1&rel=0';
-    const watch='https://www.youtube.com/watch?v='+videoId;
-    window._bwYtCurrentId=videoId;
-    const ext=document.getElementById('bw-yt-open-ext');
-    if(ext) ext.href=watch;
-    const f=_bwYtEnsureFrame();
-    if(f){
-      try{ f.setAttribute('referrerpolicy','no-referrer'); }catch(e){}
-      f.src=embed;
-    }
-    if(location.protocol==='file:'){
-      const w=window.open(embed,'bwYtPlayer','width=1280,height=720,menubar=no,toolbar=no');
-      const host=document.getElementById('bw-yt-player');
-      const old=document.getElementById('bw-yt-local-hint');
-      if(old) old.remove();
-      if(host){
-        const hint=document.createElement('div');
-        hint.id='bw-yt-local-hint';
-        hint.style.cssText='position:absolute;left:12px;right:12px;bottom:12px;background:rgba(0,0,0,.78);padding:10px 12px;border:1px solid #ff9800;color:#fff;font-size:13px;z-index:2';
-        hint.innerHTML='ローカルでは埋め込みが制限されるため再生ウィンドウを開きます。開かないときは <a href="'+embed+'" target="bwYtPlayer" rel="noopener" style="color:#ffcc66">ここ</a> か <a href="'+watch+'" target="_blank" rel="noopener" style="color:#ffcc66">YouTube</a>';
-        host.appendChild(hint);
-      }
-      if(!w){
-        const a=document.createElement('a');
-        a.href=embed; a.target='bwYtPlayer'; a.rel='noopener';
-        document.body.appendChild(a); a.click(); a.remove();
-      }
-    }
-  }
-  window._bwOpenYoutube=function(){
-    let p=document.getElementById('bw-yt-panel');
-    if(p){ p.style.display='flex'; _bwYtEnsureFrame(); return; }
-    p=document.createElement('div');
-    p.id='bw-yt-panel';
-    p.style.cssText='position:fixed;inset:0;z-index:3200;background:#020202;display:flex;flex-direction:column;color:#fff';
-    const signed=!!window._bwAuthUser;
-    const meta=window._bwAuthUser?.user_metadata||{};
-    const who=signed?(meta.full_name||meta.name||window._bwAuthUser.email||'Google'):'ゲスト';
-    p.innerHTML=`<div style="display:flex;gap:8px;align-items:center;padding:10px 14px;background:rgba(10,10,10,.92);border-bottom:3px solid #ff9800">
-      <b style="color:#ff9800;letter-spacing:1px">YouTube</b>
-      <span style="font-size:12px;color:#888">${signed?'Google: ':'ゲスト: '}${who}</span>
-      <input id="bw-yt-q" placeholder="URL、ID、または検索..." value="" style="flex:1;padding:10px 20px;background:rgba(0,0,0,.6);border:1px solid #ff9800;color:#00ffcc;border-radius:50px;outline:none">
-      <button class="mc-btn" onclick="window._bwYtGo()">開く</button>
-      <button class="mc-btn" onclick="window._bwYtSearch()">検索</button>
-      <a id="bw-yt-open-ext" class="mc-btn" target="_blank" rel="noopener" href="https://www.youtube.com">YouTubeで開く</a>
-      <button class="mc-btn btn-red" onclick="document.getElementById('bw-yt-panel').style.display='none'">閉じる</button>
-    </div>
-    <div style="display:flex;flex:1;min-height:0">
-      <div id="bw-yt-results" style="width:280px;overflow:auto;background:rgba(10,10,10,.9);border-right:1px solid #333;padding:8px"></div>
-      <div id="bw-yt-player" style="flex:1;background:#000;position:relative;min-width:0;min-height:0"></div>
-    </div>`;
-    document.body.appendChild(p);
-    _bwYtEnsureFrame();
-    document.getElementById('bw-yt-q').addEventListener('keydown',e=>{ if(e.key==='Enter') window._bwYtGo(); });
-  };
-  window._bwYtGo=function(){
-    const raw=(document.getElementById('bw-yt-q')?.value||'').trim();
-    if(!raw) return;
-    const id=_bwYtExtractId(raw);
-    if(id){ window._bwYtPlay(id); return; }
-    window._bwYtSearch();
-  };
-  window._bwYtSearch=async function(){
-    const q=document.getElementById('bw-yt-q')?.value||'Minecraft BedWars';
-    const id=_bwYtExtractId(q);
-    if(id){ window._bwYtPlay(id); return; }
-    const box=document.getElementById('bw-yt-results');
-    if(box) box.textContent='検索中...';
-    try{
-      const url=YT_SAFE+'&q='+encodeURIComponent(q);
-      const r=await fetch(url);
-      const j=await r.json();
-      const items=j.items||[];
-      if(!items.length){ if(box) box.textContent='動画が見つかりません'; return; }
-      box.innerHTML=items.map(it=>{
-        const vid=it.id&&it.id.videoId;
-        if(!vid) return '';
-        const sn=it.snippet||{};
-        const t=String(sn.title||'').replace(/[<>]/g,'');
-        const th=(sn.thumbnails&&(sn.thumbnails.medium||sn.thumbnails.default)||{}).url||'';
-        return `<div style="display:flex;gap:8px;padding:8px;margin:4px 0;background:rgba(255,255,255,.04);cursor:pointer" onclick="window._bwYtPlay('${vid}')">
-          <img src="${th}" style="width:96px;height:54px;object-fit:cover;background:#000">
-          <div style="font-size:13px">${t}</div>
-        </div>`;
-      }).join('');
-    }catch(e){ if(box) box.textContent='検索に失敗しました'; }
-  };
-  window._bwYtPlay=function(id){
-    if(!id) return;
-    _bwYtLoadContent(id);
-    const ext=document.getElementById('bw-yt-open-ext');
-    if(ext) ext.href='https://www.youtube.com/watch?v='+id;
-  };
-  window.addEventListener('load',()=>{
-    initSettingsTabs();
-    applyLobbyBg();
-    setInterval(pollQueue,5000);
-    setInterval(applyLobbyBg,20000);
-    setTimeout(pollQueue,1200);
-  });
-})();
-</script>
-</body>
-</html>

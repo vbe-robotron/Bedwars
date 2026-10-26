@@ -1,0 +1,14 @@
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 10000;
+  background: #05070b;
+  color: #ffcc00;
+  font: 28px monospace;
+}
+
+.loading.error {
+  color: #ff5555;
+}
